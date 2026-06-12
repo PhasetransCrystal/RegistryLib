@@ -41,7 +41,8 @@ jobs:
         run: |
           branch_path="${GITHUB_REF_NAME//\//-}"
           echo "branch_path=${branch_path}" >> "$GITHUB_OUTPUT"
-          echo "base_url=/${branch_path}/" >> "$GITHUB_OUTPUT"
+          repo_name="${GITHUB_REPOSITORY#*/}"
+          echo "base_url=/${repo_name}/${branch_path}/" >> "$GITHUB_OUTPUT"
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
