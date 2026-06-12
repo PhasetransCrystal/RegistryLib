@@ -45,8 +45,8 @@ public static final ItemEntry<ComponentItem> MAGIC_WAND = REGISTRYLIB
 When no hand-drawn texture exists, generate a placeholder icon during datagen:
 
 ```java
-import com.gto.registrylib.util.ColorUtil;
-import com.gto.registrylib.util.ImageUtil;
+import net.phasetranscrystal.registrylib.util.ColorUtil;
+import net.phasetranscrystal.registrylib.util.ImageUtil;
 
 .texture(() -> ImageUtil.generateIcon(ColorUtil.generateRandomVibrantColor(), ImageUtil.CIRCLE))
 ```
@@ -76,7 +76,7 @@ These utilities are datagen-only —invoked when `doDatagen()` returns true. The
 Use `constantTint(...)` when a grayscale item texture should be colored by the generated item model instead of generating one PNG per color:
 
 ```java
-import com.gto.registrylib.util.color.RgbColor;
+import net.phasetranscrystal.registrylib.util.color.RgbColor;
 
 public static final ItemEntry<Item> TIN_DUST = REGISTRYLIB
         .item("tin_dust")

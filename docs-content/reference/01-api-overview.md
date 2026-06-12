@@ -124,7 +124,7 @@ Several Entry wrappers also satisfy holder-style usage directly. When another AP
 | --- | --- |
 | `FreezableRegistry<K, V>` | A generic key-value registry with freeze semantics. Once `freeze()` is called, the registry becomes permanently immutable. Thread-safe. Use `create()` for unordered or `createOrdered()` for insertion-order iteration. |
 
-`FreezableRegistry` is located in `com.gto.registrylib.util.registry` and provides:
+`FreezableRegistry` is located in `net.phasetranscrystal.registrylib.util.registry` and provides:
 
 | Method | Description |
 | --- | --- |

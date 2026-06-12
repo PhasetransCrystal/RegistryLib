@@ -137,7 +137,7 @@ tasks.register('verifyNoRegistryLibTestLeaks') {
 
     doLast {
         def offendingFiles = mainLibrarySources.files.findAll {
-            it.getText('UTF-8').contains('com.gto.registrylibtest')
+            it.getText('UTF-8').contains('net.phasetranscrystal.registrylibtest')
         }
 
         if (!offendingFiles.isEmpty()) {
@@ -145,7 +145,7 @@ tasks.register('verifyNoRegistryLibTestLeaks') {
                 project.relativePath(it).replace('\\', '/')
             }
             throw new GradleException(
-                    'Main library sources cannot depend on com.gto.registrylibtest because that package is excluded from the published jar:\n - '
+                    'Main library sources cannot depend on net.phasetranscrystal.registrylibtest because that package is excluded from the published jar:\n - '
                             + formattedPaths.join('\n - '))
         }
     }

@@ -8,7 +8,7 @@ description: Common errors and how to fix them.
 
 ## Build & Dependency Errors
 
-### `Could not resolve com.gto:registrylib:x.x.x`
+### `Could not resolve net.phasetranscrystal:registrylib:x.x.x`
 
 **Cause:** Gradle cannot reach the Maven repository.
 
@@ -24,7 +24,7 @@ description: Common errors and how to fix them.
 **Fix:** Ensure you are using `implementation` (not `compileOnly`) in your `build.gradle` dependencies:
 ```groovy
 dependencies {
-    implementation 'com.gto:registrylib:7.0.8'
+    implementation 'net.phasetranscrystal:registrylib:7.0.8'
 }
 ```
 

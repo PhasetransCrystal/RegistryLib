@@ -42,7 +42,7 @@ Registering a Block does **NOT** automatically create a BlockItem. You must expl
 Use `tintedCube(...)` when the block model needs face-level `tintindex` values, then use `constantTint(...)` or `tintSource(...)` for the generated BlockItem model:
 
 ```java
-import com.gto.registrylib.util.color.RgbColor;
+import net.phasetranscrystal.registrylib.util.color.RgbColor;
 
 public static final BlockEntry<Block> TIN_BLOCK = REGISTRYLIB
         .block("tin_block")
