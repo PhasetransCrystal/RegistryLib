@@ -3,7 +3,6 @@ plugins {
     id 'com.diffplug.spotless' version '8.3.0'
     id 'io.freefair.lombok' version '9.2.0'
     id 'maven-publish'
-    id 'com.gto.gtopublishgradleplugin' version '1.0.21'
 }
 
 version = mod_version
@@ -212,9 +211,6 @@ tasks.configureEach {
 
 repositories {
     mavenLocal()
-    maven {
-        url = 'https://maven.gtodyssey.com/releases'
-    }
     mavenCentral()
 }
 
@@ -280,8 +276,8 @@ spotless {
     java {
         target 'src/main/java/**/*.java', 'src/test/java/**/*.java'
 
-        def orderFile = file("$rootDir/spotless/spotless.importorder")
-        def formatFile = file("$rootDir/spotless/spotless.eclipseformat.xml")
+        def orderFile = file("$projectDir/spotless/spotless.importorder")
+        def formatFile = file("$projectDir/spotless/spotless.eclipseformat.xml")
 
         toggleOffOn()
         importOrderFile(orderFile)
@@ -296,32 +292,13 @@ tasks.withType(GenerateModuleMetadata).configureEach {
 
 publishing {
     publications {
-        mavenJava(MavenPublication) {
+        register('mavenJava', MavenPublication) {
             from components.java
-            groupId = mod_group_id
-            artifactId = mod_id
         }
     }
     repositories {
         maven {
-            name = 'gtodysseyRepository'
-            url = 'https://maven.gtodyssey.com/releases'
-            credentials {
-                username = findProperty('gtodysseyRepositoryUsername') ?: ''
-                password = findProperty('gtodysseyRepositoryPassword') ?: ''
-            }
+            url "file://${project.projectDir}/repo"
         }
     }
-}
-
-gtoPublish {
-    publishMaven      = true
-    publishGithub     = true
-    publishCurseforge = true
-    mavenRepoUrl      = 'releases'
-    minecraftVersion      = '26.1.2'
-    githubRepo        = 'GregTech-Odyssey/RegistryLib'
-    modLoader         = 'NeoForge'
-    curseforgeProjectId   = '1486427'
-    curseforgeJavaVersion = 'Java 25'
 }

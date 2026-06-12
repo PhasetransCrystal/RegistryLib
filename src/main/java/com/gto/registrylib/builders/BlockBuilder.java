@@ -74,14 +74,27 @@ public class BlockBuilder<T extends Block, P>
     private Function<BlockBehaviour.Properties, BlockBehaviour.Properties> propertiesCallback = FunctionUtil.identityFn();
     @Nullable
     private ResourceKey<CreativeModeTab> defaultItemTab;
-    /** Raw {@link ItemTintSource} array for the advanced {@link #tintSource} API (datagen/client only). */
+
+    /**
+     * Raw {@link ItemTintSource} array for the advanced {@link #tintSource} API (datagen/client
+     * only).
+     */
     @Nullable
     private ItemTintSource[] blockItemTintSources;
-    /** Constant block-item tint color; the client tint source is built lazily inside datagen. Non-client. */
+
+    /**
+     * Constant block-item tint color; the client tint source is built lazily inside datagen.
+     * Non-client.
+     */
     @Nullable
     private RgbColor blockItemTintColor;
-    /** Number of block (runtime) tint sources configured. Non-client; only used for tintindex validation. */
+
+    /**
+     * Number of block (runtime) tint sources configured. Non-client; only used for tintindex
+     * validation.
+     */
     private int blockTintSourceCount;
+
     @Nullable
     private ArgbColor[] knownBlockTintColors;
     @Nullable
@@ -119,8 +132,7 @@ public class BlockBuilder<T extends Block, P>
                                     .map(b -> b.models().get(""))
                                     .map(
                                             unbaked -> {
-                                                if (unbaked instanceof SingleVariant.Unbaked(
-                                                        Variant variant)) {
+                                                if (unbaked instanceof SingleVariant.Unbaked(Variant variant)) {
                                                     return variant.modelLocation();
                                                 }
                                                 return null;
@@ -312,8 +324,8 @@ public class BlockBuilder<T extends Block, P>
     /**
      * Registers raw client {@link BlockTintSource}s for runtime block colouring. This is an advanced,
      * client/datagen-only escape hatch: constructing a {@code BlockTintSource} to pass here already
-     * requires the client classes, so it must not be called on a pure dedicated server. Prefer
-     * {@link #blockConstantTint(ArgbColor)}, which defers the client construction.
+     * requires the client classes, so it must not be called on a pure dedicated server. Prefer {@link
+     * #blockConstantTint(ArgbColor)}, which defers the client construction.
      */
     @StandardAPI
     public BlockBuilder<T, P> blockTintSource(@NotNull BlockTintSource... tintSources) {
@@ -395,9 +407,7 @@ public class BlockBuilder<T extends Block, P>
     @StandardAPI
     public BlockBuilder<T, P> debugTint() {
         int maxTintIndex = maxBlockTintIndex == null ? -1 : maxBlockTintIndex;
-        int itemTintCount = blockItemTintColor != null
-                ? 1
-                : (blockItemTintSources == null ? 0 : blockItemTintSources.length);
+        int itemTintCount = blockItemTintColor != null ? 1 : (blockItemTintSources == null ? 0 : blockItemTintSources.length);
         LOGGER.info(
                 "RegistryLib tint debug for block '{}': maxBlockTintIndex={}, blockTintSourceCount={}, blockTintColors={}, blockItemTintSourceCount={}",
                 name,
@@ -443,8 +453,7 @@ public class BlockBuilder<T extends Block, P>
     /**
      * Register display names for multiple locales at once.
      *
-     * @param localeToName map of locale code (e.g. {@code "en_us"}, {@code "zh_cn"}) to display
-     *                     name
+     * @param localeToName map of locale code (e.g. {@code "en_us"}, {@code "zh_cn"}) to display name
      */
     @StandardAPI
     public BlockBuilder<T, P> lang(@NotNull Map<String, String> localeToName) {
