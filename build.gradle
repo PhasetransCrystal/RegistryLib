@@ -114,7 +114,7 @@ jar {
     dependsOn(tasks.named('generateReleaseModsToml'))
 
     exclude 'META-INF/neoforge.mods.toml'
-    exclude 'com/gto/registrylibtest/**'
+    exclude 'net/phasetranscrystal/registrylibtest/**'
     exclude 'registrylibtest/**'
     exclude 'assets/registrylibtest/**'
     exclude 'data/registrylibtest/**'
@@ -165,7 +165,7 @@ tasks.register('verifyReleaseJarDoesNotContainRegistryLibTest') {
         def forbiddenEntries = []
 
         zipTree(jarFile).matching {
-            include 'com/gto/registrylibtest/**'
+            include 'net/phasetranscrystal/registrylibtest/**'
             include 'registrylibtest/**'
             include 'assets/registrylibtest/**'
             include 'data/registrylibtest/**'
@@ -212,6 +212,18 @@ tasks.configureEach {
 repositories {
     mavenLocal()
     mavenCentral()
+    maven {
+        name = "reposilite"
+        url = 'https://maven.nilarea.cn/releases'
+    }
+    maven {
+        name = "reposilite"
+        url = 'https://maven.nilarea.cn/private'
+        credentials {
+            username = project.findProperty('reposiliteUsername')
+            password = project.findProperty('reposilitePassword')
+        }
+    }
 }
 
 dependencies {
@@ -298,7 +310,17 @@ publishing {
     }
     repositories {
         maven {
-            url "file://${project.projectDir}/repo"
+            name = "reposilite"
+            // 根据版本类型选择 URL
+            def releasesRepoUrl = 'https://maven.nilarea.cn/releases'
+            def snapshotsRepoUrl = 'https://maven.nilarea.cn/snapshots'
+            url = version.endsWith('SNAPSHOT') ? snapshotsRepoUrl : releasesRepoUrl
+
+            // 认证信息在此配置
+            credentials {
+                username = project.findProperty('reposiliteUsername')
+                password = project.findProperty('reposilitePassword')
+            }
         }
     }
 }
