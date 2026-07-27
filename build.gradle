@@ -19,51 +19,61 @@ ext.mod_version = dynamicVersion
 version = dynamicVersion
 group = mod_group_id
 
-tasks.named('wrapper', Wrapper).configure {
-    distributionType = Wrapper.DistributionType.BIN
+base {
+    archivesName = mod_id
 }
 
-tasks.named('compileJava') {
-    dependsOn(tasks.named('verifyNoRegistryLibTestLeaks'))
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(25)
+    }
 }
-tasks.named('check') {
-    dependsOn(tasks.named('verifyReleaseJarDoesNotContainRegistryLibTest'))
-}
 
-java.toolchain.languageVersion = JavaLanguageVersion.of(25)
-
-// 包含数据生成器生成的资源.
-sourceSets.main.resources { srcDir 'src/generated/resources' }
-sourceSets.main.kotlin { srcDir("src/main/java") }
-
-apply from: "$projectDir/gradle/scripts/moddevgradle.gradle"
 apply from: "$projectDir/dependencies.gradle"
-apply from: "$projectDir/gradle/scripts/resources.gradle"
-apply from: "$projectDir/gradle/scripts/jars.gradle"
 apply from: "$projectDir/gradle/scripts/repositories.gradle"
 apply from: "$projectDir/gradle/scripts/spotless.gradle"
 
-generateModMetadata.doFirst {
-    mkdir('run/client')
-    mkdir('run/server')
-    mkdir('run/clientData')
-    mkdir('run/serverData')
+neoForge {
+    version = project.neo_version
+
+    runs {
+        client {
+            client()
+            systemProperty 'neoforge.enabledGameTestNamespaces', "${project.mod_id},registrylibtest"
+        }
+
+        server {
+            server()
+            programArgument '--nogui'
+            systemProperty 'neoforge.enabledGameTestNamespaces', "${project.mod_id},registrylibtest"
+        }
+
+        gameTestServer {
+            type = "gameTestServer"
+            systemProperty 'neoforge.enabledGameTestNamespaces', "${project.mod_id},registrylibtest"
+        }
+
+        data {
+            type = 'clientData'
+            programArguments.addAll '--mod', project.mod_id,
+                    '--mod', 'registrylibtest',
+                    '--all',
+                    '--output', file('src/generated/resources/').getAbsolutePath(),
+                    '--existing', file('src/main/resources/').getAbsolutePath()
+        }
+    }
+
+    mods {
+        "${mod_id}" {
+            sourceSet sourceSets.main
+        }
+    }
 }
 
-tasks.withType(JavaCompile).configureEach {
-    options.encoding = 'UTF-8' // Use the UTF-8 charset for Java compilation
-    options.compilerArgs << "-Xlint:-deprecation" << "-Xlint:-removal"
+sourceSets.main.resources {
+    srcDir 'src/generated/resources/registrylib'
+    srcDir 'src/generated/resources/registrylibtest'
 }
-
-configurations {
-    libraries
-    api.extendsFrom libraries
-
-    localImplementation
-    runtimeClasspath.extendsFrom localImplementation
-    compileOnly.extendsFrom localImplementation
-}
-
 
 def releaseModsToml = layout.buildDirectory.file('generated/releaseResources/META-INF/neoforge.mods.toml')
 
@@ -131,11 +141,105 @@ jar {
     }
 }
 
-java {
-    withSourcesJar()
+def mainLibrarySources = fileTree('src/main/java/com/ptcrys/registrylib') {
+    include '**/*.java'
 }
 
-//dependsOn(tasks.named('verifyReleaseJarDoesNotContainRegistryLibTest'))
+tasks.register('verifyNoRegistryLibTestLeaks') {
+    group = 'verification'
+    description = 'Fails the build if main library sources depend on registrylibtest classes that are excluded from the published jar.'
+    inputs.files(mainLibrarySources)
+
+    doLast {
+        def offendingFiles = mainLibrarySources.files.findAll {
+            it.getText('UTF-8').contains('net.ptcrys.registrylibtest')
+        }
+
+        if (!offendingFiles.isEmpty()) {
+            def formattedPaths = offendingFiles.collect {
+                project.relativePath(it).replace('\\', '/')
+            }
+            throw new GradleException(
+                    'Main library sources cannot depend on net.ptcrys.registrylibtest because that package is excluded from the published jar:\n - '
+                            + formattedPaths.join('\n - '))
+        }
+    }
+}
+
+tasks.named('compileJava') {
+    dependsOn(tasks.named('verifyNoRegistryLibTestLeaks'))
+}
+
+tasks.register('verifyReleaseJarDoesNotContainRegistryLibTest') {
+    group = 'verification'
+    description = 'Fails the build if the published jar contains registrylibtest classes, metadata, or generated resources.'
+    dependsOn(tasks.named('jar'))
+
+    doLast {
+        def jarFile = tasks.named('jar').get().archiveFile.get().asFile
+        def forbiddenEntries = []
+
+        zipTree(jarFile).matching {
+            include 'net/ptcrys/registrylibtest/**'
+            include 'registrylibtest/**'
+            include 'assets/registrylibtest/**'
+            include 'data/registrylibtest/**'
+            include 'data/minecraft/tags/**'
+        }.visit { details ->
+            if (!details.directory) {
+                forbiddenEntries.add(details.relativePath.pathString)
+            }
+        }
+
+        def modsToml = zipTree(jarFile).matching {
+            include 'META-INF/neoforge.mods.toml'
+        }.singleFile
+
+        if (modsToml.getText('UTF-8').contains('registrylibtest')) {
+            forbiddenEntries.add('META-INF/neoforge.mods.toml contains registrylibtest')
+        }
+
+        if (!forbiddenEntries.isEmpty()) {
+            throw new GradleException(
+                    'Release jar must not contain registrylibtest content:\n - '
+                            + forbiddenEntries.sort().join('\n - '))
+        }
+    }
+}
+
+tasks.named('check') {
+    dependsOn(tasks.named('verifyReleaseJarDoesNotContainRegistryLibTest'))
+}
+
+test {
+    useJUnitPlatform()
+}
+
+tasks.withType(ProcessResources).configureEach {
+    var replaceProperties = [
+            minecraft_version      : minecraft_version,
+            minecraft_version_range: minecraft_version_range,
+            neo_version            : neo_version,
+            neo_version_range      : neo_version_range,
+            loader_version_range   : loader_version_range,
+            mod_id                 : mod_id,
+            mod_name               : mod_name,
+            mod_license            : mod_license,
+            mod_version            : mod_version,
+            mod_authors            : mod_authors,
+            mod_description        : mod_description,
+    ]
+    inputs.properties replaceProperties
+
+    filesMatching(['META-INF/neoforge.mods.toml']) {
+        expand replaceProperties + [project: project]
+    }
+}
+
+tasks.withType(GenerateModuleMetadata).configureEach {
+    suppressedValidationErrors.add('dependencies-without-versions')
+}
+
 publishing {
     publications {
         register('mavenJava', MavenPublication) {
@@ -151,13 +255,5 @@ publishing {
                 password = project.findProperty('ptcrysPassword')
             }
         }
-    }
-}
-
-// IDEA不再自动下载依赖项的源码/javadoc jar，因此需要显式启用此行为。
-idea {
-    module {
-        downloadSources = true
-        downloadJavadoc = true
     }
 }
