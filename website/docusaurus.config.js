@@ -107,7 +107,7 @@ const config = {
             ],
           },
         ],
-        copyright: `Copyright (c) ${new Date().getFullYear()} GregTech Odyssey. Built with Docusaurus.`,
+        copyright: `Copyright (c) ${new Date().getFullYear()} PhasetransCrystal. Built with Docusaurus.`,
       },
       prism: {
         theme: prismThemes.github,
