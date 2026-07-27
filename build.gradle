@@ -1,64 +1,69 @@
 plugins {
-    id 'net.neoforged.moddev' version '2.0.141'
-    id 'com.diffplug.spotless' version '8.3.0'
-    id 'io.freefair.lombok' version '9.2.0'
+    id 'java-library'
     id 'maven-publish'
+    id 'idea'
+    alias libs.plugins.modDevGradleLegacy
+    alias libs.plugins.kotlinDevGradleLegacy
+    alias libs.plugins.lombokLegacy
+    alias libs.plugins.kotlinLombokLegacy
+    alias libs.plugins.spotless
 }
 
-version = mod_version
+allprojects {
+    group = 'net.ptcrys'
+}
+
+def buildDate = new Date()
+def dynamicVersion = "${String.format('%ty', buildDate)}.${buildDate.month + 1}.${buildDate.date}"
+ext.mod_version = dynamicVersion
+version = dynamicVersion
 group = mod_group_id
 
-base {
-    archivesName = mod_id
+tasks.named('wrapper', Wrapper).configure {
+    distributionType = Wrapper.DistributionType.BIN
 }
 
-java {
-    toolchain {
-        languageVersion = JavaLanguageVersion.of(25)
-    }
+tasks.named('compileJava') {
+    dependsOn(tasks.named('verifyNoRegistryLibTestLeaks'))
+}
+tasks.named('check') {
+    dependsOn(tasks.named('verifyReleaseJarDoesNotContainRegistryLibTest'))
 }
 
-neoForge {
-    version = project.neo_version
+java.toolchain.languageVersion = JavaLanguageVersion.of(25)
 
-    runs {
-        client {
-            client()
-            systemProperty 'neoforge.enabledGameTestNamespaces', "${project.mod_id},registrylibtest"
-        }
+// 包含数据生成器生成的资源.
+sourceSets.main.resources { srcDir 'src/generated/resources' }
+sourceSets.main.kotlin { srcDir("src/main/java") }
 
-        server {
-            server()
-            programArgument '--nogui'
-            systemProperty 'neoforge.enabledGameTestNamespaces', "${project.mod_id},registrylibtest"
-        }
+apply from: "$projectDir/gradle/scripts/moddevgradle.gradle"
+apply from: "$projectDir/dependencies.gradle"
+apply from: "$projectDir/gradle/scripts/resources.gradle"
+apply from: "$projectDir/gradle/scripts/jars.gradle"
+apply from: "$projectDir/gradle/scripts/repositories.gradle"
+apply from: "$projectDir/gradle/scripts/spotless.gradle"
 
-        gameTestServer {
-            type = "gameTestServer"
-            systemProperty 'neoforge.enabledGameTestNamespaces', "${project.mod_id},registrylibtest"
-        }
-
-        data {
-            type = 'clientData'
-            programArguments.addAll '--mod', project.mod_id,
-                    '--mod', 'registrylibtest',
-                    '--all',
-                    '--output', file('src/generated/resources/').getAbsolutePath(),
-                    '--existing', file('src/main/resources/').getAbsolutePath()
-        }
-    }
-
-    mods {
-        "${mod_id}" {
-            sourceSet sourceSets.main
-        }
-    }
+generateModMetadata.doFirst {
+    mkdir('run/client')
+    mkdir('run/server')
+    mkdir('run/clientData')
+    mkdir('run/serverData')
 }
 
-sourceSets.main.resources {
-    srcDir 'src/generated/resources/registrylib'
-    srcDir 'src/generated/resources/registrylibtest'
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = 'UTF-8' // Use the UTF-8 charset for Java compilation
+    options.compilerArgs << "-Xlint:-deprecation" << "-Xlint:-removal"
 }
+
+configurations {
+    libraries
+    api.extendsFrom libraries
+
+    localImplementation
+    runtimeClasspath.extendsFrom localImplementation
+    compileOnly.extendsFrom localImplementation
+}
+
 
 def releaseModsToml = layout.buildDirectory.file('generated/releaseResources/META-INF/neoforge.mods.toml')
 
@@ -114,7 +119,7 @@ jar {
     dependsOn(tasks.named('generateReleaseModsToml'))
 
     exclude 'META-INF/neoforge.mods.toml'
-    exclude 'net/phasetranscrystal/registrylibtest/**'
+    exclude 'net/ptcrys/registrylibtest/**'
     exclude 'registrylibtest/**'
     exclude 'assets/registrylibtest/**'
     exclude 'data/registrylibtest/**'
@@ -126,182 +131,11 @@ jar {
     }
 }
 
-def mainLibrarySources = fileTree('src/main/java/com/gto/registrylib') {
-    include '**/*.java'
+java {
+    withSourcesJar()
 }
 
-tasks.register('verifyNoRegistryLibTestLeaks') {
-    group = 'verification'
-    description = 'Fails the build if main library sources depend on registrylibtest classes that are excluded from the published jar.'
-    inputs.files(mainLibrarySources)
-
-    doLast {
-        def offendingFiles = mainLibrarySources.files.findAll {
-            it.getText('UTF-8').contains('net.phasetranscrystal.registrylibtest')
-        }
-
-        if (!offendingFiles.isEmpty()) {
-            def formattedPaths = offendingFiles.collect {
-                project.relativePath(it).replace('\\', '/')
-            }
-            throw new GradleException(
-                    'Main library sources cannot depend on net.phasetranscrystal.registrylibtest because that package is excluded from the published jar:\n - '
-                            + formattedPaths.join('\n - '))
-        }
-    }
-}
-
-tasks.named('compileJava') {
-    dependsOn(tasks.named('verifyNoRegistryLibTestLeaks'))
-}
-
-tasks.register('verifyReleaseJarDoesNotContainRegistryLibTest') {
-    group = 'verification'
-    description = 'Fails the build if the published jar contains registrylibtest classes, metadata, or generated resources.'
-    dependsOn(tasks.named('jar'))
-
-    doLast {
-        def jarFile = tasks.named('jar').get().archiveFile.get().asFile
-        def forbiddenEntries = []
-
-        zipTree(jarFile).matching {
-            include 'net/phasetranscrystal/registrylibtest/**'
-            include 'registrylibtest/**'
-            include 'assets/registrylibtest/**'
-            include 'data/registrylibtest/**'
-            include 'data/minecraft/tags/**'
-        }.visit { details ->
-            if (!details.directory) {
-                forbiddenEntries.add(details.relativePath.pathString)
-            }
-        }
-
-        def modsToml = zipTree(jarFile).matching {
-            include 'META-INF/neoforge.mods.toml'
-        }.singleFile
-
-        if (modsToml.getText('UTF-8').contains('registrylibtest')) {
-            forbiddenEntries.add('META-INF/neoforge.mods.toml contains registrylibtest')
-        }
-
-        if (!forbiddenEntries.isEmpty()) {
-            throw new GradleException(
-                    'Release jar must not contain registrylibtest content:\n - '
-                            + forbiddenEntries.sort().join('\n - '))
-        }
-    }
-}
-
-tasks.named('check') {
-    dependsOn(tasks.named('verifyReleaseJarDoesNotContainRegistryLibTest'))
-}
-
-def releasePublishTaskNames = [
-        'gtoPublish',
-        'gtoPublishMaven',
-        'gtoPublishGithub',
-        'gtoPublishCurseforge'
-]
-
-tasks.configureEach {
-    if (name in releasePublishTaskNames) {
-        dependsOn(tasks.named('verifyReleaseJarDoesNotContainRegistryLibTest'))
-    }
-}
-
-repositories {
-    mavenLocal()
-    mavenCentral()
-    maven {
-        name = "reposilite"
-        url = 'https://maven.nilarea.cn/releases'
-    }
-    maven {
-        name = "reposilite"
-        url = 'https://maven.nilarea.cn/private'
-        credentials {
-            username = project.findProperty('reposiliteUsername')
-            password = project.findProperty('reposilitePassword')
-        }
-    }
-}
-
-dependencies {
-    compileOnly("org.projectlombok:lombok:1.18.44")
-    annotationProcessor("org.projectlombok:lombok:1.18.44")
-
-    implementation("it.unimi.dsi:fastutil:8.5.18")
-
-    testImplementation("org.junit.jupiter:junit-jupiter:6.0.1")
-    testImplementation("com.google.guava:guava:33.5.0-jre")
-    testImplementation("it.unimi.dsi:fastutil:8.5.18")
-    testRuntimeOnly("org.junit.platform:junit-platform-launcher")
-}
-
-test {
-    useJUnitPlatform()
-}
-
-spotless {
-    java {
-        googleJavaFormat('1.35.0')
-        removeUnusedImports()
-        cleanthat()
-            .version('2.21')
-            .addMutator('UnnecessaryFullyQualifiedName')
-            .includeDraft(false)
-        target 'src/**/*.java'
-    }
-}
-
-tasks.withType(ProcessResources).configureEach {
-    var replaceProperties = [
-            minecraft_version      : minecraft_version,
-            minecraft_version_range: minecraft_version_range,
-            neo_version            : neo_version,
-            neo_version_range      : neo_version_range,
-            loader_version_range   : loader_version_range,
-            mod_id                 : mod_id,
-            mod_name               : mod_name,
-            mod_license            : mod_license,
-            mod_version            : mod_version,
-            mod_authors            : mod_authors,
-            mod_description        : mod_description,
-    ]
-    inputs.properties replaceProperties
-
-    filesMatching(['META-INF/neoforge.mods.toml']) {
-        expand replaceProperties + [project: project]
-    }
-}
-
-spotless {
-    encoding 'UTF-8'
-
-    format 'misc', {
-        target '.gitignore'
-
-        trimTrailingWhitespace()
-        leadingTabsToSpaces()
-        endWithNewline()
-    }
-    java {
-        target 'src/main/java/**/*.java', 'src/test/java/**/*.java'
-
-        def orderFile = file("$projectDir/spotless/spotless.importorder")
-        def formatFile = file("$projectDir/spotless/spotless.eclipseformat.xml")
-
-        toggleOffOn()
-        importOrderFile(orderFile)
-        endWithNewline()
-        eclipse('4.31').configFile(formatFile)
-    }
-}
-
-tasks.withType(GenerateModuleMetadata).configureEach {
-    suppressedValidationErrors.add('dependencies-without-versions')
-}
-
+//dependsOn(tasks.named('verifyReleaseJarDoesNotContainRegistryLibTest'))
 publishing {
     publications {
         register('mavenJava', MavenPublication) {
@@ -310,17 +144,20 @@ publishing {
     }
     repositories {
         maven {
-            name = "reposilite"
-            // 根据版本类型选择 URL
-            def releasesRepoUrl = 'https://maven.nilarea.cn/releases'
-            def snapshotsRepoUrl = 'https://maven.nilarea.cn/snapshots'
-            url = version.endsWith('SNAPSHOT') ? snapshotsRepoUrl : releasesRepoUrl
-
-            // 认证信息在此配置
+            name = "PtcrysReleases"
+            url = uri("https://maven.ptcrys.net/releases")
             credentials {
-                username = project.findProperty('reposiliteUsername')
-                password = project.findProperty('reposilitePassword')
+                username = project.findProperty('ptcrysUsername')
+                password = project.findProperty('ptcrysPassword')
             }
         }
+    }
+}
+
+// IDEA不再自动下载依赖项的源码/javadoc jar，因此需要显式启用此行为。
+idea {
+    module {
+        downloadSources = true
+        downloadJavadoc = true
     }
 }

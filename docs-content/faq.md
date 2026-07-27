@@ -10,7 +10,7 @@ description: Frequently asked questions about RegistryLib.
 
 ### What Minecraft / NeoForge versions does RegistryLib support?
 
-RegistryLib targets **NeoForge 26.1** on **Minecraft 1.21+**. Check the [GitHub releases](https://github.com/GregTech-Odyssey/RegistryLib/releases) page for the exact version matrix.
+RegistryLib targets **NeoForge 26.1** on **Minecraft 1.21+**. Check the [GitHub releases](https://github.com/PhasetransCrystal/RegistryLib/releases) page for the exact version matrix.
 
 ### Is RegistryLib a fork of Registrate?
 
@@ -76,4 +76,4 @@ Use `addRecipeData(...)` on your builder chain or on `RegistryCore`. See [Recipe
 
 ## Still stuck?
 
-Check the [Troubleshooting](/troubleshooting) page for error-specific solutions, or open an issue on [GitHub](https://github.com/GregTech-Odyssey/RegistryLib/issues).
+Check the [Troubleshooting](/troubleshooting) page for error-specific solutions, or open an issue on [GitHub](https://github.com/PhasetransCrystal/RegistryLib/issues).

@@ -1,0 +1,78 @@
+base {
+    archivesName = mod_id
+}
+
+afterEvaluate {
+    tasks.withType(org.gradle.jvm.tasks.Jar).configureEach {
+        manifest.attributes([
+                //Optional mixin
+                'MixinConfigs': "${mod_id}.mixins.json",
+                'Specification-Title': project.name,
+                'Specification-Version': mod_version,
+                'Implementation-Title': base.archivesName,
+                'Implementation-Version': version,
+        ])
+    }
+}
+
+def mainLibrarySources = fileTree('src/main/java/com/ptcrys/registrylib') {
+    include '**/*.java'
+}
+
+tasks.register('verifyNoRegistryLibTestLeaks') {
+    group = 'verification'
+    description = 'Fails the build if main library sources depend on registrylibtest classes that are excluded from the published jar.'
+    inputs.files(mainLibrarySources)
+
+    doLast {
+        def offendingFiles = mainLibrarySources.files.findAll {
+            it.getText('UTF-8').contains('net.ptcrys.registrylibtest')
+        }
+
+        if (!offendingFiles.isEmpty()) {
+            def formattedPaths = offendingFiles.collect {
+                project.relativePath(it).replace('\\', '/')
+            }
+            throw new GradleException(
+                    'Main library sources cannot depend on net.ptcrys.registrylibtest because that package is excluded from the published jar:\n - '
+                            + formattedPaths.join('\n - '))
+        }
+    }
+}
+
+tasks.register('verifyReleaseJarDoesNotContainRegistryLibTest') {
+    group = 'verification'
+    description = 'Fails the build if the published jar contains registrylibtest classes, metadata, or generated resources.'
+    dependsOn(tasks.named('jar'))
+
+    doLast {
+        def jarFile = tasks.named('jar').get().archiveFile.get().asFile
+        def forbiddenEntries = []
+
+        zipTree(jarFile).matching {
+            include 'net/ptcrys/registrylibtest/**'
+            include 'registrylibtest/**'
+            include 'assets/registrylibtest/**'
+            include 'data/registrylibtest/**'
+            include 'data/minecraft/tags/**'
+        }.visit { details ->
+            if (!details.directory) {
+                forbiddenEntries.add(details.relativePath.pathString)
+            }
+        }
+
+        def modsToml = zipTree(jarFile).matching {
+            include 'META-INF/neoforge.mods.toml'
+        }.singleFile
+
+        if (modsToml.getText('UTF-8').contains('registrylibtest')) {
+            forbiddenEntries.add('META-INF/neoforge.mods.toml contains registrylibtest')
+        }
+
+        if (!forbiddenEntries.isEmpty()) {
+            throw new GradleException(
+                    'Release jar must not contain registrylibtest content:\n - '
+                            + forbiddenEntries.sort().join('\n - '))
+        }
+    }
+}

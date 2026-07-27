@@ -78,5 +78,5 @@ Jump into **intermediate tutorials** for real-world patterns:
 | **Version** | 1.0.4 |
 | **Minecraft** | 26.1+ (NeoForge 26.1) |
 | **Java** | 25 |
-| **Source** | [RegistryLib](https://github.com/GregTech-Odyssey/RegistryLib) |
-| **Organization** | [GregTech-Odyssey](https://github.com/GregTech-Odyssey) |
+| **Source** | [RegistryLib](https://github.com/PhasetransCrystal/RegistryLib) |
+| **Organization** | [PhasetransCrystal](https://github.com/PhasetransCrystal) |

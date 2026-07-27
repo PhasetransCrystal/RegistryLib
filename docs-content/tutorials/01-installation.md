@@ -46,7 +46,7 @@ In your `build.gradle`:
 
 ```groovy
 dependencies {
-        implementation 'net.phasetranscrystal:registrylib:1.0.0'
+        implementation 'net.ptcrysb:1.0.0'
 }
 ```
 

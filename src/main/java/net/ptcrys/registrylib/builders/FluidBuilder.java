@@ -1,0 +1,513 @@
+package net.ptcrys.registrylib.builders;
+
+import net.ptcrys.registrylib.RegistryCore;
+import net.ptcrys.registrylib.annotations.StandardAPI;
+import net.ptcrys.registrylib.annotations.SyntaxSugar;
+import net.ptcrys.registrylib.client.Client;
+import net.ptcrys.registrylib.datagen.ProviderType;
+import net.ptcrys.registrylib.datagen.provider.RegistryLibLangProvider;
+import net.ptcrys.registrylib.util.DistExecutor;
+import net.ptcrys.registrylib.util.FunctionUtil;
+import net.ptcrys.registrylib.util.Lazy;
+import net.ptcrys.registrylib.util.entry.FluidEntry;
+import net.ptcrys.registrylib.util.entry.RegistryEntry;
+
+import net.minecraft.client.data.models.model.ItemModelUtils;
+import net.minecraft.client.data.models.model.ModelTemplates;
+import net.minecraft.client.data.models.model.TextureMapping;
+import net.minecraft.client.data.models.model.TextureSlot;
+import net.minecraft.client.renderer.block.FluidModel;
+import net.minecraft.client.resources.model.sprite.Material;
+import net.minecraft.core.registries.Registries;
+import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceKey;
+import net.minecraft.tags.TagKey;
+import net.minecraft.world.item.BucketItem;
+import net.minecraft.world.item.CreativeModeTab;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.LiquidBlock;
+import net.minecraft.world.level.block.state.BlockBehaviour;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.material.Fluid;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.neoforge.client.extensions.common.IClientFluidTypeExtensions;
+import net.neoforged.neoforge.client.fluid.FluidTintSource;
+import net.neoforged.neoforge.client.fluid.FluidTintSources;
+import net.neoforged.neoforge.fluids.BaseFlowingFluid;
+import net.neoforged.neoforge.fluids.FluidType;
+import net.neoforged.neoforge.registries.NeoForgeRegistries;
+
+import com.google.common.base.Preconditions;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
+
+import java.util.Locale;
+import java.util.Map;
+import java.util.function.BiFunction;
+import java.util.function.Consumer;
+import java.util.function.Function;
+import java.util.function.Supplier;
+import java.util.function.ToIntFunction;
+
+public class FluidBuilder<T extends BaseFlowingFluid, P>
+                         extends AbstractBuilder<Fluid, T, P, FluidBuilder<T, P>> {
+
+    @FunctionalInterface
+    public interface FluidTypeFactory {
+
+        FluidType create(FluidType.Properties properties);
+    }
+
+    @FunctionalInterface
+    public interface FluidFactory<T> {
+
+        T create(BaseFlowingFluid.Properties properties);
+    }
+
+    private static final Identifier BUCKET_FLUID_TEXTURE = Identifier.fromNamespaceAndPath("registrylib", "item/bucket_fluid");
+    private static final Identifier BUCKET_BASE_TEXTURE = Identifier.fromNamespaceAndPath("registrylib", "item/bucket_base");
+
+    @StandardAPI
+    public FluidBuilder<T, P> clientExtension(
+                                              @NotNull Supplier<Supplier<IClientFluidTypeExtensions>> clientExtension) {
+        DistExecutor.unsafeRunWhenOn(
+                Dist.CLIENT,
+                () -> () -> Client.registerFluidTypeExtensions(fluidType, clientExtension.get().get()));
+        return this;
+    }
+
+    @SyntaxSugar("clientExtension(stillTexture, flowingTexture, -1)")
+    public FluidBuilder<T, P> clientExtension(
+                                              @NotNull Identifier stillTexture, @NotNull Identifier flowingTexture) {
+        return clientExtension(stillTexture, flowingTexture, -1);
+    }
+
+    @SyntaxSugar("clientExtension(() -> () -> new DefaultFluidTypeExtension(tintColor)) + register client fluid model")
+    /**
+     * 同时注册：
+     *
+     * <ul>
+     * <li>用于雾色的 {@link DefaultFluidTypeExtension}（基于 {@code tintColor}）
+     * <li>用于纹理 / 着色的 {@link net.minecraft.client.renderer.block.FluidModel.Unbaked}（NeoForge 26.1+
+     * 的新流体渲染管线）
+     * </ul>
+     */
+    public FluidBuilder<T, P> clientExtension(
+                                              @NotNull Identifier stillTexture, @NotNull Identifier flowingTexture, int tintColor) {
+        this.tintColor = tintColor;
+        this.stillTextureIdentifier = stillTexture;
+        // 1) 雾色扩展
+        clientExtension(() -> () -> new DefaultFluidTypeExtension(tintColor));
+        // 2) 流体模型（纹理 + 可选 tint）
+        DistExecutor.unsafeRunWhenOn(
+                Dist.CLIENT,
+                () -> () -> {
+                    // 延迟到模型注册事件触发时再解析 source，避免在 builder 配置阶段过早捕获 null。
+                    Supplier<? extends Fluid> stillSupplier = () -> {
+                        Supplier<? extends BaseFlowingFluid> sourceSupplier = this.source;
+                        if (sourceSupplier != null) return sourceSupplier.get();
+                        throw new IllegalStateException(
+                                "Cannot register fluid model: source fluid not yet defined for " + sourceName);
+                    };
+                    Supplier<? extends Fluid> flowingSupplier = () -> getValueSupplier().get();
+                    Material still = new Material(stillTexture);
+                    Material flowing = new Material(flowingTexture);
+                    FluidTintSource tint = tintColor != -1 ? FluidTintSources.constant(tintColor) : null;
+                    FluidModel.Unbaked model = new FluidModel.Unbaked(still, flowing, null, tint);
+                    Client.registerFluidModel(this, stillSupplier, flowingSupplier, model);
+                });
+        return this;
+    }
+
+    // --- Static factory methods ---
+
+    public static <T extends BaseFlowingFluid, P> FluidBuilder<T, P> create(
+                                                                            RegistryCore owner,
+                                                                            P parent,
+                                                                            String name,
+                                                                            FluidTypeFactory typeFactory,
+                                                                            FluidFactory<T> fluidFactory) {
+        return new FluidBuilder<>(owner, parent, name, typeFactory, fluidFactory)
+                .defaultLang()
+                .defaultSource()
+                .defaultBlock()
+                .defaultBucket();
+    }
+
+    public static <T extends BaseFlowingFluid, P> FluidBuilder<T, P> create(
+                                                                            RegistryCore owner,
+                                                                            P parent,
+                                                                            String name,
+                                                                            Supplier<FluidType> fluidType,
+                                                                            FluidFactory<T> fluidFactory) {
+        return new FluidBuilder<>(owner, parent, name, fluidType, fluidFactory)
+                .defaultLang()
+                .defaultSource()
+                .defaultBlock()
+                .defaultBucket();
+    }
+
+    // --- Fields ---
+
+    private int tintColor = -1;
+    @Nullable
+    private Identifier stillTextureIdentifier;
+
+    private final String sourceName, bucketName;
+    private final FluidFactory<T> fluidFactory;
+    private final Supplier<FluidType> fluidType;
+
+    @Nullable
+    private Boolean defaultSource, defaultBlock, defaultBucket;
+    @Nullable
+    private ResourceKey<CreativeModeTab> defaultBucketTab;
+
+    private Consumer<FluidType.Properties> typeProperties = FunctionUtil.noOpConsumer();
+    private Consumer<BaseFlowingFluid.Properties> fluidProperties = FunctionUtil.noOpConsumer();
+
+    private final boolean registerType;
+
+    @Nullable
+    private Supplier<? extends BaseFlowingFluid> source;
+
+    // --- Constructors ---
+
+    public FluidBuilder(
+                        RegistryCore core,
+                        P parent,
+                        String name,
+                        FluidTypeFactory typeFactory,
+                        FluidFactory<T> fluidFactory) {
+        super(core, parent, "flowing_" + name, Registries.FLUID);
+        this.sourceName = name;
+        this.bucketName = name + "_bucket";
+        this.fluidFactory = fluidFactory;
+        this.fluidType = Lazy.of(() -> typeFactory.create(makeTypeProperties()));
+        this.registerType = true;
+    }
+
+    public FluidBuilder(
+                        RegistryCore core,
+                        P parent,
+                        String name,
+                        Supplier<FluidType> fluidType,
+                        FluidFactory<T> fluidFactory) {
+        super(core, parent, "flowing_" + name, Registries.FLUID);
+        this.sourceName = name;
+        this.bucketName = name + "_bucket";
+        this.fluidFactory = fluidFactory;
+        this.fluidType = fluidType;
+        this.registerType = false;
+    }
+
+    // === Configuration ===
+
+    @StandardAPI
+    public FluidBuilder<T, P> properties(@NotNull Consumer<FluidType.Properties> cons) {
+        typeProperties = typeProperties.andThen(cons);
+        return this;
+    }
+
+    @StandardAPI
+    public FluidBuilder<T, P> fluidProperties(@NotNull Consumer<BaseFlowingFluid.Properties> cons) {
+        fluidProperties = fluidProperties.andThen(cons);
+        return this;
+    }
+
+    @SyntaxSugar("lang(f -> f.getFluidType().getDescriptionId(), RegistryLibLangProvider.toEnglishName(sourceName))")
+    public FluidBuilder<T, P> defaultLang() {
+        return lang(
+                ProviderType.LANG,
+                f -> f.getFluidType().getDescriptionId(),
+                RegistryLibLangProvider.toEnglishName(sourceName));
+    }
+
+    @SyntaxSugar("lang(f -> f.getFluidType().getDescriptionId(), name)")
+    public FluidBuilder<T, P> lang(@NotNull String name) {
+        return lang(ProviderType.LANG, f -> f.getFluidType().getDescriptionId(), name);
+    }
+
+    @SyntaxSugar("lang(type, f -> f.getFluidType().getDescriptionId(), name)")
+    public FluidBuilder<T, P> lang(
+                                   @NotNull ProviderType<? extends RegistryLibLangProvider> type, @NotNull String name) {
+        return lang(type, f -> f.getFluidType().getDescriptionId(), name);
+    }
+
+    /**
+     * Register display names for multiple locales at once.
+     *
+     * @param localeToName map of locale code (e.g. {@code "en_us"}, {@code "zh_cn"}) to display name
+     */
+    @StandardAPI
+    public FluidBuilder<T, P> lang(@NotNull Map<String, String> localeToName) {
+        for (var entry : localeToName.entrySet()) {
+            String locale = entry.getKey().toLowerCase(Locale.ROOT);
+            if ("en_us".equals(locale)) {
+                lang(entry.getValue());
+            } else {
+                lang(core.locale(locale), entry.getValue());
+            }
+        }
+        return this;
+    }
+
+    // --- Source ---
+
+    @SyntaxSugar("source(BaseFlowingFluid.Source::new)")
+    public FluidBuilder<T, P> defaultSource() {
+        if (this.defaultSource != null) {
+            throw new IllegalStateException(
+                    "Cannot set a default source after a custom source has been created");
+        }
+        this.defaultSource = true;
+        return this;
+    }
+
+    @StandardAPI
+    public FluidBuilder<T, P> source(
+                                     @NotNull Function<BaseFlowingFluid.Properties, ? extends BaseFlowingFluid> factory) {
+        this.defaultSource = false;
+        this.source = Lazy.of(() -> factory.apply(makeProperties()));
+        return this;
+    }
+
+    // --- Block ---
+
+    @SyntaxSugar("block($ -> {})")
+    public FluidBuilder<T, P> defaultBlock() {
+        if (this.defaultBlock != null) {
+            throw new IllegalStateException(
+                    "Cannot set a default block after a custom block has been created");
+        }
+        this.defaultBlock = true;
+        return this;
+    }
+
+    @StandardAPI("Configures a BlockBuilder for the fluid block sub-entry via lambda.")
+    public FluidBuilder<T, P> block(
+                                    @NotNull Consumer<BlockBuilder<LiquidBlock, FluidBuilder<T, P>>> consumer) {
+        return block(LiquidBlock::new, consumer);
+    }
+
+    @StandardAPI("Configures a BlockBuilder with a custom block factory via lambda.")
+    public <B extends LiquidBlock> FluidBuilder<T, P> block(
+                                                            @NotNull BiFunction<T, BlockBehaviour.Properties, ? extends B> factory,
+                                                            @NotNull Consumer<BlockBuilder<B, FluidBuilder<T, P>>> consumer) {
+        if (Boolean.FALSE.equals(this.defaultBlock)) {
+            throw new IllegalStateException("Only one call to block/noBlock per builder allowed");
+        }
+        this.defaultBlock = false;
+        final Supplier<T> supplier = getValueSupplier();
+        final Supplier<Integer> lightLevel = Lazy.of(() -> fluidType.get().getLightLevel());
+        final ToIntFunction<BlockState> lightLevelInt = $ -> lightLevel.get();
+        final Identifier particleTexture = this.stillTextureIdentifier;
+        final var block = core.<B, FluidBuilder<T, P>>block(this, sourceName, p -> factory.apply(supplier.get(), p))
+                .properties(p -> BlockBehaviour.Properties.ofFullCopy(Blocks.WATER).noLootTable())
+                .properties(p -> p.lightLevel(lightLevelInt))
+                .blockstate(
+                        () -> (value, prov) -> {
+                            if (particleTexture != null) {
+                                prov.createNonTemplateModelBlock(value, particleTexture);
+                            } else {
+                                prov.createNonTemplateModelBlock(value);
+                            }
+                        });
+        var blockSupplier = block.getValueSupplier();
+        this.fluidProperties(p -> p.block(blockSupplier));
+        consumer.accept(block);
+        return block.build();
+    }
+
+    @StandardAPI
+    public FluidBuilder<T, P> noBlock() {
+        if (Boolean.FALSE.equals(this.defaultBlock)) {
+            throw new IllegalStateException("Only one call to block/noBlock per builder allowed");
+        }
+        this.defaultBlock = false;
+        return this;
+    }
+
+    // --- Bucket ---
+
+    @SyntaxSugar("bucket($ -> {})")
+    public FluidBuilder<T, P> defaultBucket() {
+        if (this.defaultBucket != null) {
+            throw new IllegalStateException(
+                    "Cannot set a default bucket after a custom bucket has been created");
+        }
+        defaultBucket = true;
+        return this;
+    }
+
+    /**
+     * Sets a default creative tab that will be applied to any bucket item created via {@link
+     * #bucket}.
+     */
+    @StandardAPI
+    public FluidBuilder<T, P> defaultBucketTab(@NotNull ResourceKey<CreativeModeTab> tab) {
+        this.defaultBucketTab = tab;
+        return this;
+    }
+
+    @StandardAPI("Configures an ItemBuilder for the bucket sub-entry via lambda.")
+    public FluidBuilder<T, P> bucket(
+                                     @NotNull Consumer<ItemBuilder<BucketItem, FluidBuilder<T, P>>> consumer) {
+        return bucket(BucketItem::new, consumer);
+    }
+
+    @StandardAPI("Configures an ItemBuilder with a custom bucket factory via lambda.")
+    public <I extends BucketItem> FluidBuilder<T, P> bucket(
+                                                            @NotNull BiFunction<BaseFlowingFluid, Item.Properties, ? extends I> factory,
+                                                            @NotNull Consumer<ItemBuilder<I, FluidBuilder<T, P>>> consumer) {
+        if (Boolean.FALSE.equals(this.defaultBucket)) {
+            throw new IllegalStateException("Only one call to bucket/noBucket per builder allowed");
+        }
+        this.defaultBucket = false;
+        // Resolve default source if not yet created
+        if (this.source == null && Boolean.TRUE.equals(this.defaultSource)) {
+            source(BaseFlowingFluid.Source::new);
+        }
+        Supplier<? extends BaseFlowingFluid> sourceSupplier = this.source;
+        if (sourceSupplier == null) {
+            throw new IllegalStateException("Cannot create a bucket before creating a source block");
+        }
+        final int bucketTintColor = this.tintColor;
+        final var item = core.<I, FluidBuilder<T, P>>item(
+                this, bucketName, p -> factory.apply(sourceSupplier.get(), p), false)
+                .properties(p -> p.craftRemainder(Items.BUCKET).stacksTo(1))
+                .model(
+                        () -> (ctx, prov) -> {
+                            TextureMapping textures = new TextureMapping();
+                            textures.put(TextureSlot.LAYER0, new Material(BUCKET_FLUID_TEXTURE));
+                            textures.put(TextureSlot.LAYER1, new Material(BUCKET_BASE_TEXTURE));
+                            Identifier modelId = ModelTemplates.TWO_LAYERED_ITEM.create(ctx, textures, prov.modelOutput);
+                            if (bucketTintColor != -1) {
+                                prov.itemModelOutput.accept(
+                                        ctx,
+                                        ItemModelUtils.tintedModel(
+                                                modelId, ItemModelUtils.constantTint(bucketTintColor)));
+                            } else {
+                                prov.itemModelOutput.accept(ctx, ItemModelUtils.plainModel(modelId));
+                            }
+                        });
+        var itemSupplier = item.getValueSupplier();
+        this.fluidProperties(p -> p.bucket(itemSupplier));
+        if (defaultBucketTab != null) {
+            item.addTab(defaultBucketTab);
+        }
+        consumer.accept(item);
+        return item.build();
+    }
+
+    @StandardAPI
+    public FluidBuilder<T, P> noBucket() {
+        if (Boolean.FALSE.equals(this.defaultBucket)) {
+            throw new IllegalStateException("Only one call to bucket/noBucket per builder allowed");
+        }
+        this.defaultBucket = false;
+        return this;
+    }
+
+    // --- Tags ---
+
+    @SafeVarargs
+    @StandardAPI
+    public final FluidBuilder<T, P> tag(TagKey<Fluid>... tags) {
+        return this.addTag(ProviderType.FLUID_TAGS, tags);
+    }
+
+    // --- Internal helpers ---
+
+    private BaseFlowingFluid.Properties makeProperties() {
+        Supplier<? extends BaseFlowingFluid> sourceSupplier = this.source;
+        Preconditions.checkNotNull(sourceSupplier, "Fluid has no source block: " + sourceName);
+        BaseFlowingFluid.Properties ret = new BaseFlowingFluid.Properties(fluidType, sourceSupplier, getValueSupplier());
+        fluidProperties.accept(ret);
+        return ret;
+    }
+
+    private FluidType.Properties makeTypeProperties() {
+        FluidType.Properties properties = FluidType.Properties.create();
+        this.typeProperties.accept(properties);
+        properties.descriptionId(
+                Identifier.fromNamespaceAndPath(core.getModid(), sourceName).toLanguageKey("fluid"));
+        return properties;
+    }
+
+    @Override
+    @StandardAPI
+    public FluidEntry<T> register() {
+        if (this.registerType) {
+            core.registry(
+                    this.sourceName, NeoForgeRegistries.Keys.FLUID_TYPES, ignoredKey -> this.fluidType.get());
+        }
+
+        if (Boolean.TRUE.equals(defaultSource)) {
+            source(BaseFlowingFluid.Source::new);
+        }
+        if (Boolean.TRUE.equals(defaultBlock)) {
+            block(FunctionUtil.noOpConsumer());
+        }
+        if (Boolean.TRUE.equals(defaultBucket)) {
+            bucket(FunctionUtil.noOpConsumer());
+        }
+
+        Supplier<? extends BaseFlowingFluid> sourceSupplier = this.source;
+        if (sourceSupplier != null) {
+            core.registry(sourceName, Registries.FLUID, ignoredKey -> sourceSupplier.get());
+        } else {
+            throw new IllegalStateException("Fluid must have a source version: " + name);
+        }
+
+        return (FluidEntry<T>) super.register();
+    }
+
+    @Override
+    protected T createEntry(ResourceKey<Fluid> key) {
+        return fluidFactory.create(makeProperties());
+    }
+
+    @Override
+    protected RegistryEntry<Fluid, T> createEntryWrapper(ResourceKey<Fluid> key) {
+        return new FluidEntry<>(core, key);
+    }
+
+    // --- DefaultFluidTypeExtension ---
+
+    /**
+     * 默认流体类型扩展。
+     *
+     * <p>
+     * NeoForge 26.1+ 中，{@code IClientFluidTypeExtensions} 已不再包含 {@code
+     * getStillTexture/getFlowingTexture/getTintColor} —— 纹理与着色已迁移到 {@link
+     * net.minecraft.client.renderer.block.FluidModel.Unbaked}（通过 {@link
+     * net.neoforged.neoforge.client.event.RegisterFluidModelsEvent} 注册）。 此扩展现在仅负责修改流体雾色 ({@link
+     * #modifyFogColor})。
+     */
+    public static class DefaultFluidTypeExtension implements IClientFluidTypeExtensions {
+
+        private final int tintColor;
+
+        public DefaultFluidTypeExtension(int tintColor) {
+            this.tintColor = tintColor;
+        }
+
+        @Override
+        public void modifyFogColor(
+                                   net.minecraft.client.Camera camera,
+                                   float partialTick,
+                                   net.minecraft.client.multiplayer.ClientLevel level,
+                                   int renderDistance,
+                                   float darkenWorldAmount,
+                                   org.joml.Vector4f fluidFogColor) {
+            if (tintColor != -1) {
+                fluidFogColor.x = (tintColor >> 16 & 0xFF) / 255.0f;
+                fluidFogColor.y = (tintColor >> 8 & 0xFF) / 255.0f;
+                fluidFogColor.z = (tintColor & 0xFF) / 255.0f;
+                fluidFogColor.w = 1.0f;
+            }
+        }
+    }
+}

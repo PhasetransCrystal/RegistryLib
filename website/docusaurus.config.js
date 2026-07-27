@@ -11,10 +11,10 @@ const config = {
     v4: true,
   },
 
-  url: 'https://registrylib.gtodyssey.com',
+  url: 'https://registrylib.ptcrys.net',
   baseUrl: process.env.DOCUSAURUS_BASE_URL ?? '/',
 
-  organizationName: 'GregTech-Odyssey',
+  organizationName: 'PhasetransCrystal',
   projectName: 'RegistryLib',
   trailingSlash: false,
 
@@ -41,7 +41,7 @@ const config = {
           routeBasePath: '/',
           sidebarPath: './sidebars.js',
           editUrl:
-            'https://github.com/GregTech-Odyssey/RegistryLib/tree/26.1/docs-content/',
+            'https://github.com/PhasetransCrystal/RegistryLib/tree/26.1.2/docs-content/',
         },
         blog: false,
         theme: {
@@ -74,7 +74,7 @@ const config = {
             label: 'Docs',
           },
           {
-            href: 'https://github.com/GregTech-Odyssey/RegistryLib',
+            href: 'https://github.com/PhasetransCrystal/RegistryLib',
             label: 'GitHub',
             position: 'right',
           },
@@ -102,7 +102,7 @@ const config = {
             items: [
               {
                 label: 'GitHub',
-                href: 'https://github.com/GregTech-Odyssey/RegistryLib',
+                href: 'https://github.com/PhasetransCrystal/RegistryLib',
               },
             ],
           },

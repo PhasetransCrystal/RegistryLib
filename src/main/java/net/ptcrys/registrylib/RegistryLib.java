@@ -1,0 +1,38 @@
+package net.ptcrys.registrylib;
+
+import net.ptcrys.registrylib.client.Client;
+import net.ptcrys.registrylib.state.StateDebugCommands;
+import net.ptcrys.registrylib.util.DistExecutor;
+
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.bus.api.EventPriority;
+import net.neoforged.bus.api.IEventBus;
+import net.neoforged.fml.common.Mod;
+import net.neoforged.neoforge.common.NeoForge;
+import net.neoforged.neoforge.event.RegisterCommandsEvent;
+
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
+import java.util.Random;
+
+@Mod(RegistryLib.MOD_ID)
+public final class RegistryLib {
+
+    public static final String MOD_ID = "registrylib";
+
+    public static final Logger LOGGER = LogManager.getLogger();
+
+    public static final Random RANDOM = new Random();
+
+    public RegistryLib(IEventBus modEventBus) {
+        modEventBus.addListener(EventPriority.LOW, RegistryCore::onRegister);
+        modEventBus.addListener(EventPriority.LOWEST, RegistryCore::onRegisterLate);
+        modEventBus.addListener(RegistryCore::onBuildCreativeModeTabContents);
+        modEventBus.addListener(RegistryCore::onEntityAttributeCreation);
+        modEventBus.addListener(RegistryCore::onRegisterSpawnPlacements);
+        NeoForge.EVENT_BUS.addListener(
+                (RegisterCommandsEvent event) -> StateDebugCommands.register(event));
+        DistExecutor.unsafeRunWhenOn(Dist.CLIENT, () -> () -> Client.init(modEventBus));
+    }
+}

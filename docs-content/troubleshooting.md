@@ -8,14 +8,14 @@ description: Common errors and how to fix them.
 
 ## Build & Dependency Errors
 
-### `Could not resolve net.phasetranscrystal:registrylib:x.x.x`
+### `Could not resolve net.ptcrys:registrylib:x.x.x`
 
 **Cause:** Gradle cannot reach the Maven repository.
 
 **Fix:**
 1. Ensure your `settings.gradle` or `build.gradle` includes the Gtodyssey Maven repository.
-2. Verify the URL is `https://maven.gtodyssey.com/releases`.
-3. Check your network connectivity to `maven.gtodyssey.com`.
+2. Verify the URL is `https://maven.ptcrys.net/releases`.
+3. Check your network connectivity to `maven.ptcrys.net`.
 
 ### `NoClassDefFoundError` or `ClassNotFoundException` for RegistryLib classes
 
@@ -24,7 +24,7 @@ description: Common errors and how to fix them.
 **Fix:** Ensure you are using `implementation` (not `compileOnly`) in your `build.gradle` dependencies:
 ```groovy
 dependencies {
-    implementation 'net.phasetranscrystal:registrylib:7.0.8'
+    implementation 'net.ptcrysb:7.0.8'
 }
 ```
 
@@ -132,4 +132,4 @@ Two lambda levels are required, not one. The JVM resolves a lambda's *instantiat
 
 ## Still stuck?
 
-Check the [FAQ](/faq) or open an issue on [GitHub](https://github.com/GregTech-Odyssey/RegistryLib/issues).
+Check the [FAQ](/faq) or open an issue on [GitHub](https://github.com/PhasetransCrystal/RegistryLib/issues).
