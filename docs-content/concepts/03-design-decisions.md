@@ -108,12 +108,28 @@ public class MachineBlockBuilder<T extends MachineBlock, P>
 
 A plugin system would add complexity for a use case that most mods don't need. Method overriding keeps the common case simple and the advanced case possible.
 
+## Using Multiple Cores for One Mod
+
+Use one shared Core when all your modules use the same Builder methods and defaults. Create additional Cores when a module needs its own defaults or a custom Core subclass. Pass the same modid to each Core so their registered content and generated data belong to the same mod.
+
+For example, a materials module and a machines module can each register items through their own Core. Both sets of items are available through either Core's `get(...)` and `getAll(...)` methods, and their translations appear together in your mod's language files. You do not need to copy entries or callbacks between Cores.
+
+Keep these configuration boundaries in mind:
+
+- Item, block, and fluid Builder defaults apply only to builders created through that Core. Set the default creative tab on each Core that needs it.
+- Locale aliases apply to all Cores using the same modid. Configure them before any module adds translations for that locale.
+- If you override `priority()` or use `skipErrors(...)`, registration event processing uses the first Core created for that modid. Configure that Core during mod construction.
+- Each resource ID must remain unique within its registry. Two Cores cannot define different items under the same ID.
+- Calling `setDataGenerator` again for the same entry and generator type replaces its previous configuration. Use `addDataGenerator` to add callbacks without replacing that configuration.
+
+A custom Core's Builder methods are available when you call that instance directly. `getCoreByModId` returns the first Core created for the modid; it does not select a custom subclass for you.
+
 ## Thread-Safety Decisions
 
 Minecraft is fundamentally single-threaded for most game logic, but certain RegistryLib systems can be accessed from multiple threads (e.g. render thread vs. server thread, parallel mod loading). The library uses targeted concurrency primitives rather than blanket synchronization:
 
 - **TooltipRegistry** uses a `ThreadLocal` collector so that tooltip resolution on the render thread cannot interfere with other threads. Each thread builds its own node list independently.
-- **RegistryCore.completedRegistrations** uses `ConcurrentHashMap.newKeySet()` because multiple mods may complete registration concurrently during parallel mod loading.
+- **RegistryCore pipeline completion status** uses `ConcurrentHashMap.newKeySet()` because multiple mods may complete registration concurrently during parallel mod loading.
 - **ItemAttachment cache** uses a `ConcurrentHashMap` for the same reason —attachment lookups can occur from any thread during setup.
 - **NestedMap / NestedMultiMap** mark their `isInnerRefMap` flag as `volatile` to ensure visibility across threads when the inner map is replaced.
 
