@@ -138,7 +138,13 @@ public interface ProviderType<T extends RegistryLibProvider> extends GeneratorTy
     @NotNull
     static <T extends RegistryLibProvider> ProviderType<T> registerProvider(
                                                                             String name, ProviderType<T> type) {
-        RegistryLibDataProvider.TYPES.put(name, type);
+        synchronized (RegistryLibDataProvider.TYPES) {
+            ProviderType<?> previous = RegistryLibDataProvider.TYPES.get(name);
+            if (previous != null && previous != type) {
+                throw new IllegalStateException("Provider type already registered: " + name);
+            }
+            RegistryLibDataProvider.TYPES.put(name, type);
+        }
         return type;
     }
 
@@ -147,9 +153,7 @@ public interface ProviderType<T extends RegistryLibProvider> extends GeneratorTy
     static <T extends RegistryLibProvider> ProviderType<T> registerClientProvider(
                                                                                   String name, Supplier<ProviderType<T>> supplier) {
         if (!DatagenModLoader.isRunningDataGen()) return (ProviderType<T>) NULL;
-        var type = supplier.get();
-        RegistryLibDataProvider.TYPES.put(name, type);
-        return type;
+        return registerProvider(name, supplier.get());
     }
 
     @NotNull
@@ -159,8 +163,8 @@ public interface ProviderType<T extends RegistryLibProvider> extends GeneratorTy
         if (RegistryLibDataProvider.TAG_TYPES.containsKey(key)) {
             return (ProviderType<R>) RegistryLibDataProvider.TAG_TYPES.get(key);
         }
+        registerProvider(name, type);
         RegistryLibDataProvider.TAG_TYPES.put(key, type);
-        RegistryLibDataProvider.TYPES.put(name, type);
         return type;
     }
 

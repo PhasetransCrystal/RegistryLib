@@ -102,7 +102,6 @@ import it.unimi.dsi.fastutil.objects.ReferenceOpenHashSet;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.logging.log4j.Logger;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -127,28 +126,39 @@ public class RegistryCore {
             Comparator.comparingInt(RegistryCore::priority).thenComparing(RegistryCore::getModid));
 
     private static final ConcurrentHashMap<String, RegistryCore> CORES_BY_MODID = new ConcurrentHashMap<>();
+    // Provider names are global; their default locale identities must be global too.
+    // Translation callbacks and explicit aliases belong to each namespace pipeline.
+    private static final ConcurrentHashMap<String, ProviderType<RegistryLibLangProvider>> DEFAULT_LOCALE_PROVIDERS = new ConcurrentHashMap<>();
     private static final Logger log = RegistryLib.LOGGER;
 
-    private final NestedMap<ResourceKey<? extends Registry<?>>, String, RegistryEntry<?, ?>> registryEntry = NestedMap.createIdentity(LinkedHashMap::new);
-    private final MultiMap<ResourceKey<? extends Registry<?>>, Registration<?, ?>> registrations = MultiMap.createIdentity(ArrayList::new);
-    private final MultiMap<ResourceKey<? extends Registry<?>>, Runnable> afterRegisterCallbacks = MultiMap.createIdentity(ArrayList::new);
-    private final Set<ResourceKey<? extends Registry<?>>> completedRegistrations = ConcurrentHashMap.newKeySet();
-
-    private final MultiMap<ResourceKey<CreativeModeTab>, Consumer<CreativeModeTabModifier>> creativeModeTabModifiers = MultiMap.createIdentity(ArrayList::new);
-    private final ListRegistry<Pair<Supplier<EntityType<?>>, Supplier<AttributeSupplier.Builder>>> entityAttributes = new ListRegistry<>();
-    private final ListRegistry<Consumer<RegisterSpawnPlacementsEvent>> spawnPlacements = new ListRegistry<>();
-
-    private final NestedMap<GeneratorType<?>, Pair<ResourceKey<?>, String>, Consumer<?>> dataGensByEntry = NestedMap.createIdentity(HashMap::new);
-    private final MultiMap<GeneratorType<?>, Consumer<?>> dataGens = MultiMap.createIdentity(ReferenceOpenHashSet::new);
-    private final ConcurrentHashMap<String, ProviderType<RegistryLibLangProvider>> localeProviders = new ConcurrentHashMap<>();
-    private final NestedMap<ProviderType<? extends RegistryLibLangProvider>, String, String> extraLang = NestedMap.createIdentity(LinkedHashMap::new);
-    private final Set<ProviderType<? extends RegistryLibLangProvider>> extraLangCallbacks = new ReferenceOpenHashSet<>();
     private final List<Consumer<ItemBuilder<?, ?>>> itemDefaultCallbacks = new ArrayList<>();
     private final List<Consumer<BlockBuilder<?, ?>>> blockDefaultCallbacks = new ArrayList<>();
     private final List<Consumer<FluidBuilder<?, ?>>> fluidDefaultCallbacks = new ArrayList<>();
-    private final Set<String> blockstateExcludedBlocks = new java.util.HashSet<>();
-    private final List<String> generatedNamespaceCleanups = new ArrayList<>();
-    private final StateRegistryManager stateRegistryManager = new StateRegistryManager();
+
+    // All Core instances for a namespace contribute to this single pipeline.
+    private static final ConcurrentHashMap<String, RegistrationPipeline> PIPELINES = new ConcurrentHashMap<>();
+    private final RegistrationPipeline pipeline;
+
+    private static final class RegistrationPipeline {
+
+        private final NestedMap<ResourceKey<? extends Registry<?>>, String, RegistryEntry<?, ?>> registryEntry = NestedMap.createIdentity(LinkedHashMap::new);
+        private final MultiMap<ResourceKey<? extends Registry<?>>, Registration<?, ?>> registrations = MultiMap.createIdentity(ArrayList::new);
+        private final MultiMap<ResourceKey<? extends Registry<?>>, Runnable> afterRegisterCallbacks = MultiMap.createIdentity(ArrayList::new);
+        private final Set<ResourceKey<? extends Registry<?>>> completedRegistrations = ConcurrentHashMap.newKeySet();
+        private final MultiMap<ResourceKey<CreativeModeTab>, Consumer<CreativeModeTabModifier>> creativeModeTabModifiers = MultiMap.createIdentity(ArrayList::new);
+        private final ListRegistry<Pair<Supplier<EntityType<?>>, Supplier<AttributeSupplier.Builder>>> entityAttributes = new ListRegistry<>();
+        private final ListRegistry<Consumer<RegisterSpawnPlacementsEvent>> spawnPlacements = new ListRegistry<>();
+        private final NestedMap<GeneratorType<?>, Pair<ResourceKey<?>, String>, Consumer<?>> dataGensByEntry = NestedMap.createIdentity(HashMap::new);
+        private final MultiMap<GeneratorType<?>, Consumer<?>> dataGens = MultiMap.createIdentity(ReferenceOpenHashSet::new);
+        private final ConcurrentHashMap<String, ProviderType<RegistryLibLangProvider>> localeProviders = new ConcurrentHashMap<>();
+        private final NestedMap<ProviderType<? extends RegistryLibLangProvider>, String, String> extraLang = NestedMap.createIdentity(LinkedHashMap::new);
+        private final Set<ProviderType<? extends RegistryLibLangProvider>> extraLangCallbacks = new ReferenceOpenHashSet<>();
+        private final Set<String> blockstateExcludedBlocks = new java.util.HashSet<>();
+        private final List<String> generatedNamespaceCleanups = new ArrayList<>();
+        private final StateRegistryManager stateRegistryManager = new StateRegistryManager();
+        private RegistryLibDataProvider provider;
+        private DataProviderInitializer initializer;
+    }
 
     protected ResourceKey<CreativeModeTab> defaultCreativeModeTab = null;
 
@@ -160,22 +170,24 @@ public class RegistryCore {
 
     protected RegistryCore(String modid) {
         this.modid = modid;
-        if (doDatagen()) {
-            ModList.get()
-                    .getModContainerById(modid)
-                    .ifPresent(c -> c.getEventBus().addListener(this::onGatherData));
+        this.pipeline = PIPELINES.computeIfAbsent(modid, key -> new RegistrationPipeline());
+        // The first Core dispatches events for the shared pipeline exactly once.
+        if (CORES_BY_MODID.putIfAbsent(modid, this) == null) {
+            if (doDatagen()) {
+                ModList.get()
+                        .getModContainerById(modid)
+                        .ifPresent(c -> c.getEventBus().addListener(this::onGatherData));
+            }
+            REGISTRY_CORES.add(this);
         }
-        RegistryCore existing = CORES_BY_MODID.putIfAbsent(modid, this);
-        if (existing != null) {
-            throw new IllegalStateException("Duplicate RegistryCore for mod: " + modid);
-        }
-        REGISTRY_CORES.add(this);
     }
 
+    /** Creates a Core that contributes to the shared pipeline for {@code modid}. */
     public static RegistryCore create(String modid) {
         return new RegistryCore(modid);
     }
 
+    /** Returns the first Core, which dispatches events for this modid's pipeline. */
     public static Optional<RegistryCore> getCoreByModId(String modId) {
         return Optional.ofNullable(CORES_BY_MODID.get(modId));
     }
@@ -196,37 +208,34 @@ public class RegistryCore {
         return 0;
     }
 
-    @Nullable
-    private RegistryLibDataProvider provider;
-
     // === Entry Access ===
     @SuppressWarnings("unchecked")
     public <R, T extends R> RegistryEntry<R, T> get(
                                                     String name, ResourceKey<? extends Registry<R>> type) {
-        return (RegistryEntry<R, T>) this.registryEntry.get(type, name);
+        return (RegistryEntry<R, T>) pipeline.registryEntry.get(type, name);
     }
 
     @SuppressWarnings("unchecked")
     public <R, T extends R> Collection<RegistryEntry<R, T>> getAll(
                                                                    ResourceKey<? extends Registry<R>> type) {
-        return (Collection) registryEntry.get(type).values();
+        return (Collection) pipeline.registryEntry.get(type).values();
     }
 
     // === Callback Management ===
 
     public <R> void addRegisterCallback(
                                         ResourceKey<? extends Registry<R>> registryType, Runnable callback) {
-        afterRegisterCallbacks.put(registryType, callback);
+        pipeline.afterRegisterCallbacks.put(registryType, callback);
     }
 
     public <R> boolean isRegistered(ResourceKey<? extends Registry<R>> registryType) {
-        return completedRegistrations.contains(registryType);
+        return pipeline.completedRegistrations.contains(registryType);
     }
 
     // === Data Generation ===
 
     public <P> Optional<P> getDataProvider(GeneratorType<P> type) {
-        RegistryLibDataProvider provider = this.provider;
+        RegistryLibDataProvider provider = pipeline.provider;
         if (provider != null) return provider.getSubProvider(type);
         throw new IllegalStateException("Cannot get data provider before datagen is started");
     }
@@ -238,19 +247,19 @@ public class RegistryCore {
                                      Consumer<? extends P> cons) {
         if (!doDatagen()) return;
         @SuppressWarnings("null")
-        Consumer<?> existing = dataGensByEntry.put(type, Pair.of(key, name), cons);
+        Consumer<?> existing = pipeline.dataGensByEntry.put(type, Pair.of(key, name), cons);
         if (existing != null) {
-            dataGens.remove(type, existing);
+            pipeline.dataGens.remove(type, existing);
         }
         addDataGenerator(type, cons);
     }
 
     public <T> void addDataGenerator(GeneratorType<? extends T> type, Consumer<? extends T> cons) {
         if (doDatagen()) {
-            if (provider != null)
+            if (pipeline.provider != null)
                 throw new IllegalStateException(
                         "Cannot add data generator after construction of root generator");
-            dataGens.put(type, cons);
+            pipeline.dataGens.put(type, cons);
         }
     }
 
@@ -259,25 +268,22 @@ public class RegistryCore {
     }
 
     public void excludeBlockFromModelValidation(String blockName) {
-        blockstateExcludedBlocks.add(blockName);
+        pipeline.blockstateExcludedBlocks.add(blockName);
     }
 
     public void includeBlockInModelValidation(String blockName) {
-        blockstateExcludedBlocks.remove(blockName);
+        pipeline.blockstateExcludedBlocks.remove(blockName);
     }
 
     public boolean isBlockExcludedFromModelValidation(String blockName) {
-        return blockstateExcludedBlocks.contains(blockName);
+        return pipeline.blockstateExcludedBlocks.contains(blockName);
     }
 
-    @Nullable
-    private DataProviderInitializer initializer;
-
     public DataProviderInitializer getDataGenInitializer() {
-        if (initializer == null) {
-            initializer = new DataProviderInitializer();
+        if (pipeline.initializer == null) {
+            pipeline.initializer = new DataProviderInitializer();
         }
-        return initializer;
+        return pipeline.initializer;
     }
 
     // === Lang ===
@@ -381,16 +387,26 @@ public class RegistryCore {
         if ("en_us".equals(normalized)) {
             return ProviderType.LANG;
         }
-        return localeProviders.computeIfAbsent(normalized, this::createLocaleProvider);
+        return pipeline.localeProviders.computeIfAbsent(normalized,
+                key -> DEFAULT_LOCALE_PROVIDERS.computeIfAbsent(key, RegistryCore::createLocaleProvider));
     }
 
     public RegistryCore withLangAlias(String locale, ProviderType<RegistryLibLangProvider> provider) {
-        localeProviders.put(locale.toLowerCase(Locale.ROOT), provider);
+        java.util.Objects.requireNonNull(provider, "locale provider");
+        String normalized = locale.toLowerCase(Locale.ROOT);
+        if ("en_us".equals(normalized) && provider != ProviderType.LANG) {
+            throw new IllegalArgumentException("en_us uses ProviderType.LANG");
+        }
+        ProviderType<RegistryLibLangProvider> previous = pipeline.localeProviders.get(normalized);
+        if (previous != null && previous != provider && !pipeline.dataGens.get(previous).isEmpty()) {
+            throw new IllegalStateException("Cannot change locale provider after registering callbacks: " + normalized);
+        }
+        pipeline.localeProviders.put(normalized, provider);
         return this;
     }
 
     @SuppressWarnings("unchecked")
-    private ProviderType<RegistryLibLangProvider> createLocaleProvider(String locale) {
+    private static ProviderType<RegistryLibLangProvider> createLocaleProvider(String locale) {
         final ProviderType<?>[] holder = new ProviderType<?>[1];
         ProviderType<RegistryLibLangProvider> type = ProviderType.registerClientProvider(
                 "lang/" + locale,
@@ -407,7 +423,7 @@ public class RegistryCore {
 
     private void addExtraLang(
                               ProviderType<? extends RegistryLibLangProvider> type, String key, String value) {
-        String existing = extraLang.get(type, key);
+        String existing = pipeline.extraLang.get(type, key);
         if (existing != null) {
             if (!existing.equals(value)) {
                 throw new IllegalArgumentException(
@@ -415,20 +431,20 @@ public class RegistryCore {
             }
             return;
         }
-        if (extraLangCallbacks.add(type)) {
-            addDataGenerator(type, prov -> extraLang.get(type).forEach(prov::add));
+        if (pipeline.extraLangCallbacks.add(type)) {
+            addDataGenerator(type, prov -> pipeline.extraLang.get(type).forEach(prov::add));
         }
-        extraLang.put(type, key, value);
+        pipeline.extraLang.put(type, key, value);
     }
 
     // === Data Gen Execution ===
     @SuppressWarnings("unchecked")
     public <T> void genData(GeneratorType<? extends T> type, T gen) {
         if (!doDatagen()) return;
-        if (provider != null) {
-            provider.putSubProvider(type, gen);
+        if (pipeline.provider != null) {
+            pipeline.provider.putSubProvider(type, gen);
         }
-        dataGens
+        pipeline.dataGens
                 .get(type)
                 .forEach(
                         cons -> {
@@ -499,20 +515,20 @@ public class RegistryCore {
     }
 
     public RegistryCore cleanGeneratedNamespace(@NotNull String relativePath) {
-        generatedNamespaceCleanups.add(relativePath);
+        pipeline.generatedNamespaceCleanups.add(relativePath);
         return this;
     }
 
     public List<String> getGeneratedNamespaceCleanups() {
-        return Collections.unmodifiableList(generatedNamespaceCleanups);
+        return Collections.unmodifiableList(pipeline.generatedNamespaceCleanups);
     }
 
     public Collection<StateEntry<?>> getStateEntries() {
-        return stateRegistryManager.all();
+        return pipeline.stateRegistryManager.all();
     }
 
     public void registerStateEntry(StateEntry<?> entry) {
-        stateRegistryManager.register(entry);
+        pipeline.stateRegistryManager.register(entry);
     }
 
     public static Collection<RegistryCore> getRegistryCores() {
@@ -539,7 +555,7 @@ public class RegistryCore {
                                       ResourceKey<CreativeModeTab> creativeModeTab, Consumer<CreativeModeTabModifier> modifier) {
         if (creativeModeTab == CreativeModeTabs.SEARCH)
             throw new RuntimeException("SEARCH is a reserved tab name");
-        creativeModeTabModifiers.put(creativeModeTab, modifier);
+        pipeline.creativeModeTabModifiers.put(creativeModeTab, modifier);
     }
 
     // === Core Registration ===
@@ -557,8 +573,8 @@ public class RegistryCore {
                 factory,
                 entryFactory,
                 callbacks);
-        registrations.put(registryType, reg);
-        registryEntry.put(registryType, name, reg.entry);
+        pipeline.registrations.put(registryType, reg);
+        pipeline.registryEntry.put(registryType, name, reg.entry);
         return reg.entry;
     }
 
@@ -1352,7 +1368,7 @@ public class RegistryCore {
     @SuppressWarnings("unchecked")
     public void registerEntityAttributes(
                                          Supplier<?> entityTypeSupplier, Supplier<AttributeSupplier.Builder> attributesFactory) {
-        entityAttributes.add(Pair.of((Supplier<EntityType<?>>) entityTypeSupplier, attributesFactory));
+        pipeline.entityAttributes.add(Pair.of((Supplier<EntityType<?>>) entityTypeSupplier, attributesFactory));
     }
 
     public <T extends Entity> void registerSpawnPlacement(
@@ -1360,7 +1376,7 @@ public class RegistryCore {
                                                           SpawnPlacementType placementType,
                                                           Heightmap.Types heightmap,
                                                           SpawnPlacements.SpawnPredicate<T> predicate) {
-        spawnPlacements.add(
+        pipeline.spawnPlacements.add(
                 event -> event.register(
                         entityType.get(),
                         placementType,
@@ -1427,7 +1443,7 @@ public class RegistryCore {
         var type = event.getRegistry();
         var key = type.key();
         REGISTRY_CORES.forEach(
-                core -> core.registrations
+                core -> core.pipeline.registrations
                         .remove(key)
                         .forEach(
                                 r -> {
@@ -1448,15 +1464,15 @@ public class RegistryCore {
         var type = event.getRegistryKey();
         REGISTRY_CORES.forEach(
                 core -> {
-                    core.afterRegisterCallbacks.remove(type).forEach(Runnable::run);
-                    core.completedRegistrations.add(type);
+                    core.pipeline.afterRegisterCallbacks.remove(type).forEach(Runnable::run);
+                    core.pipeline.completedRegistrations.add(type);
                 });
     }
 
     static void onBuildCreativeModeTabContents(BuildCreativeModeTabContentsEvent event) {
         var modifier = new CreativeModeTabModifier(event);
         REGISTRY_CORES.forEach(
-                core -> core.creativeModeTabModifiers
+                core -> core.pipeline.creativeModeTabModifiers
                         .get(event.getTabKey())
                         .forEach(value -> value.accept(modifier)));
     }
@@ -1465,25 +1481,30 @@ public class RegistryCore {
     static void onEntityAttributeCreation(EntityAttributeCreationEvent event) {
         REGISTRY_CORES.forEach(
                 core -> {
-                    core.entityAttributes.consume(
+                    core.pipeline.entityAttributes.consume(
                             pair -> {
                                 var type = (EntityType<? extends LivingEntity>) pair.getLeft().get();
                                 event.put(type, pair.getRight().get().build());
                             });
-                    if (!core.registrations.isEmpty()) {
-                        log.error("Registry {} has unregistered entries", core.registrations.getMap().keySet());
+                    if (!core.pipeline.registrations.isEmpty()) {
+                        log.error("Registry {} has unregistered entries", core.pipeline.registrations.getMap().keySet());
                     }
                 });
     }
 
     static void onRegisterSpawnPlacements(RegisterSpawnPlacementsEvent event) {
-        REGISTRY_CORES.forEach(core -> core.spawnPlacements.consume(action -> action.accept(event)));
+        REGISTRY_CORES.forEach(core -> core.pipeline.spawnPlacements.consume(action -> action.accept(event)));
     }
 
     private void onGatherData(GatherDataEvent.Client event) {
+        for (GeneratorType<?> type : pipeline.dataGens.getMap().keySet()) {
+            if (type instanceof ProviderType<?> && RegistryLibDataProvider.getTypeName(type) == null) {
+                throw new IllegalStateException("No registered provider for datagen callbacks in " + modid + ": " + type);
+            }
+        }
         event
                 .getGenerator()
-                .addProvider(true, provider = new RegistryLibDataProvider(this, modid, event));
+                .addProvider(true, pipeline.provider = new RegistryLibDataProvider(this, modid, event));
     }
 
     private static final class Registration<R, T extends R> {

@@ -28,7 +28,7 @@ The code snippets on this page are short excerpts from the runnable `RegistryLib
 | Register chunk or world state | `chunkState("id", codec, default)` or `worldState("id", codec, default)` | `debug`, `sync`, `register` |
 | Register a crop-like plant | `crop("id")` | `properties`, `produce`, `growthRoll`, `onHarvest`, `stageTextures` |
 | Register configured and placed worldgen | `worldgenFeature("id", configuredFeature)` | `placement`, `addToBiomes`, `register` |
-| Share defaults across many entries | `group("name")` | `langPrefix`, `tab`, `initialBlockProperties`, `blockProperties`, `itemProperties`, `addBlockTag`, `addItemTag`, `addFluidTag` |
+| Share defaults across many entries | `group("name")` | `langPrefix`, `tab`, `initialBlockProperties`, `blockProperties`, `itemProperties`, `addBlockTag`, `addItemTag`, `addFluidTag`, `configureBlock`, `configureItem`, `configureFluid`, `configureBlockEntity`, `build(factory)` |
 | Reference existing vanilla or third-party objects | `existingItem("namespace:id")`, `existingBlock("namespace:id")` | pass the entry to recipes, tags, tabs, tooltips, or holder-style APIs |
 | Add tags to existing objects | `tagExisting(...)`, `itemTags().add(...)`, `itemTags().addSuppliers(...)`, `blockTags().addSuppliers(...)` | datagen-only tag entries |
 | Share grayscale template textures | `constantTint(texturePath, RgbColor.of(...))`, `visual(ItemVisualPreset.tintedTemplate(...))`, `visual(BlockVisualPreset.constantTintedCube(...))` | model tint without per-material PNGs |

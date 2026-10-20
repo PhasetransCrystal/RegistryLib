@@ -17,6 +17,7 @@ import net.ptcrys.registrylibtest.fluid.FullFluidExample;
 import net.ptcrys.registrylibtest.fluid.SimpleFluidExample;
 import net.ptcrys.registrylibtest.gametest.RegistryLibFeatureGameTests;
 import net.ptcrys.registrylibtest.gametest.RegistryLibGameTestSupport;
+import net.ptcrys.registrylibtest.gametest.RegistryLibGroupGameTests;
 import net.ptcrys.registrylibtest.gametest.RegistryLibStateGameTests;
 import net.ptcrys.registrylibtest.item.FullItemExample;
 import net.ptcrys.registrylibtest.item.SimpleItemExample;
@@ -154,6 +155,7 @@ public class RegistryLibTest {
         LOGGER.info("registrylib test mod initializing...");
         RegistryLibStateGameTests.register(modEventBus);
         RegistryLibFeatureGameTests.register(modEventBus);
+        RegistryLibGroupGameTests.register(modEventBus);
         LOGGER.info(
                 "Registered {} items and {} blocks",
                 REGISTRYLIB.getAll(Registries.ITEM).size(),

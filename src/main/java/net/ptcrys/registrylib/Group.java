@@ -27,6 +27,10 @@ import lombok.Setter;
 import lombok.experimental.Accessors;
 import org.jetbrains.annotations.NotNull;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Objects;
+import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.function.UnaryOperator;
@@ -39,7 +43,7 @@ import javax.annotation.Nullable;
  *
  * <p>
  * The group name is used to automatically derive a {@code langPrefix}: {@code "machines"}
- * becomes {@code "Machines"}, which is prepended to every entry's display name. You can override
+ * becomes {@code "Machines"}, which is prepended to block, item, and fluid display names. You can override
  * this with an explicit {@link Builder#langPrefix(String)} call.
  *
  * <p>
@@ -83,6 +87,11 @@ public class Group {
 
     protected final Reference2ReferenceOpenHashMap<ProviderType<? extends RegistryLibTagsProvider<?>>, Reference2BooleanOpenHashMap<TagKey<?>>> tagsByType;
 
+    protected final List<Consumer<? super BlockBuilder<?, ?>>> blockConfigurations;
+    protected final List<Consumer<? super ItemBuilder<?, ?>>> itemConfigurations;
+    protected final List<Consumer<? super FluidBuilder<?, ?>>> fluidConfigurations;
+    protected final List<Consumer<? super BlockEntityBuilder<?, ?>>> blockEntityConfigurations;
+
     protected Group(Builder builder) {
         this.core = builder.core;
         this.tab = builder.tab;
@@ -91,7 +100,14 @@ public class Group {
         this.initialItemProperties = builder.initialItemProperties;
         this.blockPropertiesModifier = builder.blockProperties;
         this.itemPropertiesModifier = builder.itemProperties;
-        this.tagsByType = builder.tagsByType;
+        this.tagsByType = builder.tagsByType == null ? null : new Reference2ReferenceOpenHashMap<>();
+        if (builder.tagsByType != null) {
+            builder.tagsByType.forEach((type, tags) -> this.tagsByType.put(type, new Reference2BooleanOpenHashMap<>(tags)));
+        }
+        this.blockConfigurations = List.copyOf(builder.blockConfigurations);
+        this.itemConfigurations = List.copyOf(builder.itemConfigurations);
+        this.fluidConfigurations = List.copyOf(builder.fluidConfigurations);
+        this.blockEntityConfigurations = List.copyOf(builder.blockEntityConfigurations);
     }
 
     // === Accessors ===
@@ -122,7 +138,7 @@ public class Group {
     @StandardAPI("Returns a BlockEntityBuilder with group defaults applied. Call .register() to finalise.")
     public <T extends BlockEntity> BlockEntityBuilder<T, Group> blockEntity(
                                                                             String name, BlockEntityBuilder.BlockEntityFactory<T> factory) {
-        return core.blockEntity(this, name, factory);
+        return applyBlockEntityDefaults(core.blockEntity(this, name, factory));
     }
 
     @StandardAPI("Returns a FluidBuilder with group defaults applied. Call .register() to finalise.")
@@ -143,9 +159,9 @@ public class Group {
 
     // === Default Application ===
 
+    /** Applies built-in block defaults, then callbacks; preserves the Builder and its parent type. */
     @SuppressWarnings("unchecked")
-    private <T extends Block> BlockBuilder<T, Group> applyBlockDefaults(
-                                                                        BlockBuilder<T, Group> builder) {
+    protected <T extends Block, B extends BlockBuilder<T, ?>> B applyBlockDefaults(B builder) {
         if (initialBlockProperties != null) {
             builder.setInitialProperties(initialBlockProperties);
         }
@@ -170,11 +186,13 @@ public class Group {
                         (tag, value) -> builder.addTag(ProviderType.ITEM_TAGS, value, (TagKey<Item>) tag));
             }
         }
+        blockConfigurations.forEach(configuration -> configuration.accept(builder));
         return builder;
     }
 
+    /** Applies built-in item defaults, then callbacks; preserves the Builder and its parent type. */
     @SuppressWarnings("unchecked")
-    private <T extends Item> ItemBuilder<T, Group> applyItemDefaults(ItemBuilder<T, Group> builder) {
+    protected <T extends Item, B extends ItemBuilder<T, ?>> B applyItemDefaults(B builder) {
         if (initialItemProperties != null) {
             builder.initialProperties(initialItemProperties);
         }
@@ -194,12 +212,13 @@ public class Group {
                         (tag, value) -> builder.addTag(ProviderType.ITEM_TAGS, value, (TagKey<Item>) tag));
             }
         }
+        itemConfigurations.forEach(configuration -> configuration.accept(builder));
         return builder;
     }
 
+    /** Applies built-in fluid defaults, then callbacks; preserves the Builder and its parent type. */
     @SuppressWarnings("unchecked")
-    private <T extends BaseFlowingFluid> FluidBuilder<T, Group> applyFluidDefaults(
-                                                                                   FluidBuilder<T, Group> builder) {
+    protected <T extends BaseFlowingFluid, B extends FluidBuilder<T, ?>> B applyFluidDefaults(B builder) {
         if (tab != null) {
             builder.defaultBucketTab(tab);
         }
@@ -213,6 +232,13 @@ public class Group {
                         (tag, value) -> builder.addTag(ProviderType.FLUID_TAGS, value, (TagKey<Fluid>) tag));
             }
         }
+        fluidConfigurations.forEach(configuration -> configuration.accept(builder));
+        return builder;
+    }
+
+    /** Applies block entity callbacks; item, block, and fluid defaults do not apply here. */
+    protected <T extends BlockEntity, B extends BlockEntityBuilder<T, ?>> B applyBlockEntityDefaults(B builder) {
+        blockEntityConfigurations.forEach(configuration -> configuration.accept(builder));
         return builder;
     }
 
@@ -240,6 +266,11 @@ public class Group {
         protected UnaryOperator<Item.Properties> itemProperties;
 
         protected final Reference2ReferenceOpenHashMap<ProviderType<? extends RegistryLibTagsProvider<?>>, Reference2BooleanOpenHashMap<TagKey<?>>> tagsByType;
+
+        protected final List<Consumer<? super BlockBuilder<?, ?>>> blockConfigurations = new ArrayList<>();
+        protected final List<Consumer<? super ItemBuilder<?, ?>>> itemConfigurations = new ArrayList<>();
+        protected final List<Consumer<? super FluidBuilder<?, ?>>> fluidConfigurations = new ArrayList<>();
+        protected final List<Consumer<? super BlockEntityBuilder<?, ?>>> blockEntityConfigurations = new ArrayList<>();
 
         protected Builder(RegistryCore core, String name) {
             this.core = core;
@@ -300,9 +331,43 @@ public class Group {
             return addTag(ProviderType.FLUID_TAGS, false, tag);
         }
 
+        /** Appends configuration applied after built-in Group defaults, before the entry's own chain. */
+        @StandardAPI
+        public Builder configureBlock(Consumer<? super BlockBuilder<?, ?>> configuration) {
+            blockConfigurations.add(Objects.requireNonNull(configuration, "configuration"));
+            return this;
+        }
+
+        /** Appends configuration applied after built-in Group defaults, before the entry's own chain. */
+        @StandardAPI
+        public Builder configureItem(Consumer<? super ItemBuilder<?, ?>> configuration) {
+            itemConfigurations.add(Objects.requireNonNull(configuration, "configuration"));
+            return this;
+        }
+
+        /** Appends configuration applied after built-in Group defaults, before the entry's own chain. */
+        @StandardAPI
+        public Builder configureFluid(Consumer<? super FluidBuilder<?, ?>> configuration) {
+            fluidConfigurations.add(Objects.requireNonNull(configuration, "configuration"));
+            return this;
+        }
+
+        /** Appends configuration applied after built-in Group defaults, before the entry's own chain. */
+        @StandardAPI
+        public Builder configureBlockEntity(Consumer<? super BlockEntityBuilder<?, ?>> configuration) {
+            blockEntityConfigurations.add(Objects.requireNonNull(configuration, "configuration"));
+            return this;
+        }
+
         @StandardAPI
         public Group build() {
-            return new Group(this);
+            return build(Group::new);
+        }
+
+        /** Builds a custom Group while preserving its concrete return type. */
+        @StandardAPI
+        public <G extends Group> G build(Function<? super Builder, ? extends G> factory) {
+            return Objects.requireNonNull(factory.apply(this), "group");
         }
     }
 }
