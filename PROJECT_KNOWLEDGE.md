@@ -24,3 +24,12 @@
 实际 datagen 验证两个 Core 的语言键同时存在于同一个 `assets/registrylibtest/lang/en_us.json`。测试元数据通过 `/tmp` 内 Gradle init 脚本补入忽略的构建目录；datagen 输出到 `/tmp`，未修改项目运行配置。
 
 最终验证：`spotlessApply test check`、7 个 GameTest 和 `runData` 均通过。单元测试报告为 125 项、0 失败、25 跳过；跳过项不计为已运行验证。
+
+## Group 扩展与配置边界
+
+- Group 提供 `configureBlock`、`configureItem`、`configureFluid`、`configureBlockEntity`，重复调用按声明顺序追加。回调在内置 Group 默认配置之后、条目链配置之前执行。
+- 回调仅作用于直接通过相应 Group 入口创建的 Builder；BlockItem 和流体桶通过对应的 BlockBuilder／FluidBuilder 配置方法处理。
+- `applyBlockDefaults`、`applyItemDefaults`、`applyFluidDefaults`、`applyBlockEntityDefaults` 是 protected 扩展点，保留传入 Builder 的具体类型及父类型。已有 Group 入口已应用默认配置，自定义入口不要再次应用。
+- `build(factory)` 可返回自定义 Group 类型；无参 `build()` 保持兼容。构建时复制标签内外层 Map 和配置回调列表，复用 Builder 不会改变已构建 Group 的这些配置。
+- 来源：`Group.java`；使用文档：`docs-content/tutorials/05-group-system.md`。GameTest 在 `RegistryLibGroupGameTests.java`，覆盖实际注册属性、配置顺序、构建快照及自定义 Builder。
+- 本次验证：`spotlessApply test check`、9 个 GameTest、`runData` 通过；生成文件确认语言前缀、自定义中文翻译和方块掉落正确。单元测试报告仍为 125 项、0 失败、25 跳过。
