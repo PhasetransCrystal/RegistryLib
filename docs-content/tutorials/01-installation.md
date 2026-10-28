@@ -67,7 +67,7 @@ Run `./gradlew build` first. If it succeeds, your dependency setup is correct.
 
 ## Create `REGISTRYLIB` First
 
-Before you can register an Item, Block, or Fluid, you need one shared registry entry point. This is a static field that all your registration calls will reference.
+Before you can register an Item, Block, or Fluid, create a registry entry point. A shared static field is a convenient starting point for your registration calls.
 
 ```java
 public static final String MOD_ID = "examplemod";
@@ -81,6 +81,26 @@ The test mod uses `ModRegistryCore` instead of the base `RegistryCore` because i
 public static final RegistryCore REGISTRYLIB = RegistryCore.create(MOD_ID);
 ```
 :::
+
+## Multiple Cores for One Mod
+
+You can keep using one shared Core throughout your mod. If separate modules need their own Core instances or custom Core subclasses, give them the same `modid`:
+
+```java
+RegistryCore materials = RegistryCore.create(MOD_ID);
+RegistryCore machines = RegistryCore.create(MOD_ID);
+
+materials.item("copper_plate", Item::new).lang("Copper Plate").register();
+machines.item("machine_frame", Item::new).lang("Machine Frame").register();
+```
+
+Both items are registered under your modid, and both names appear in your mod's `en_us.json`. Either Core can query both entries with `get(...)` or `getAll(...)`. Cores with different modids keep their registrations and generated data separate.
+
+Create and configure Cores during mod construction, before registry events and datagen start. Each resource ID must still be unique within its registry; sharing a pipeline does not merge duplicate item or block definitions.
+
+Builder defaults and the default creative tab remain local to each Core, so configure them on the instance that creates your builders. Creating another Core returns a new object; `getCoreByModId(MOD_ID)` retrieves the first Core created for that modid.
+
+See [Using Multiple Cores](/concepts/design-decisions#using-multiple-cores-for-one-mod) for configuration boundaries.
 
 ## What's Next
 

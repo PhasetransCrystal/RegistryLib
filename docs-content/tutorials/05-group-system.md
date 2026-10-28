@@ -64,7 +64,7 @@ Here is the full list of defaults that a Group can apply:
 
 | Default | Applies to |
 | --- | --- |
-| `langPrefix` | All entries registered through that Group |
+| `langPrefix` | Blocks, regular Items, and Fluids created through that Group |
 | `tab` | BlockItems, regular Items, and fluid buckets |
 | `initialBlockProperties` | All Blocks registered through that Group |
 | `blockProperties` | All Blocks registered through that Group |
@@ -76,7 +76,7 @@ Here is the full list of defaults that a Group can apply:
 
 ### Override Order
 
-Group defaults are applied when the Builder is created. Anything you chain **after** `.block(...)`, `.item(...)`, or `.fluid(...)` has higher priority:
+Configuration is applied when a Builder is created: Core defaults, built-in Group defaults, Group configuration callbacks, then your per-entry chain. Later property assignments can override earlier values, while additive operations such as tags accumulate:
 
 ```java
 public static final BlockEntry<TimerBlock> TIMER_TIER_3 = TIMER_GROUP
@@ -119,6 +119,64 @@ Tags are injected at the same time as other defaults —before any per-entry cha
 :::tip
 For more detail on per-entry tags and recipe datagen, see the [Recipes and Tags](./recipes-tags) tutorial.
 :::
+
+## Step 7 —Reuse Builder Configuration
+
+Use configuration callbacks when the fixed Group options do not cover a repeated Builder operation:
+
+```java
+Group machines = REGISTRYLIB.group("machines")
+        .configureBlock(block -> block
+                .properties(p -> p.strength(5.0F))
+                .defaultLoot())
+        .configureItem(item -> item.properties(p -> p.stacksTo(16)))
+        .build();
+
+machines.item("machine_part", Item::new)
+        .properties(p -> p.stacksTo(4))
+        .register();
+```
+
+The item above has a stack size of 4. Other Items created through `machines` have the Group's stack size of 16.
+
+| Callback | Applied to |
+| --- | --- |
+| `configureBlock(...)` | Each Builder returned by `group.block(...)` |
+| `configureItem(...)` | Each Builder returned by `group.item(...)` |
+| `configureFluid(...)` | Each Builder returned by either `group.fluid(...)` overload |
+| `configureBlockEntity(...)` | Each Builder returned by `group.blockEntity(...)` |
+
+Calling a configuration method several times appends callbacks in declaration order. Each callback runs once when its Builder is created, after the built-in Group defaults. Configure the supplied Builder; call `.register()` on the completed entry chain as usual.
+
+Callbacks apply to these direct Group entry points. For example, `configureItem` does not automatically configure a BlockItem created by `.simpleItem()` or a fluid bucket. Configure those through `configureBlock(block -> block.item(...))` or `configureFluid(fluid -> fluid.bucket(...))` when needed. The built-in Group `tab` option still handles those generated item forms.
+
+Each `build()` captures the current tags and callback lists. You may reuse a Group Builder to create a second Group with more defaults; changing that Builder does not change the first Group's captured configuration.
+
+## Step 8 —Add Project-Specific Group Methods
+
+When your project needs a named registration operation, extend `Group` and construct it with `build(factory)`:
+
+```java
+public class MachineGroup extends Group {
+    public MachineGroup(Group.Builder options) {
+        super(options);
+    }
+
+    public ItemBuilder<Item, Group> part(String name) {
+        return applyItemDefaults(core.item(this, name, Item::new, false));
+    }
+}
+
+MachineGroup machines = REGISTRYLIB.group("machines")
+        .configureItem(item -> item.properties(p -> p.stacksTo(16)))
+        .build(MachineGroup::new);
+
+machines.part("copper_gear").register();
+```
+
+Use the protected `applyBlockDefaults`, `applyItemDefaults`, `applyFluidDefaults`, and `applyBlockEntityDefaults` methods when your custom entry point creates a Builder directly. They apply the matching Group defaults and callbacks and return the same Builder subtype, so a custom Builder can keep its additional methods. Builders returned by the existing Group entry points already have these defaults applied; do not apply them a second time.
+
+You may also override these methods to extend the default rules. Call the matching `super` method when you want to retain the built-in behavior. `build(factory)` returns your concrete Group type without a cast; the existing no-argument `build()` continues to return `Group`.
 
 ## Common Patterns
 

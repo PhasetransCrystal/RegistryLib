@@ -1,5 +1,8 @@
 package net.ptcrys.registrylibtest.gametest;
 
+import net.ptcrys.registrylib.RegistryCore;
+import net.ptcrys.registrylib.datagen.GeneratorType;
+import net.ptcrys.registrylib.util.entry.RegistryEntry;
 import net.ptcrys.registrylibtest.RegistryLibTest;
 import net.ptcrys.registrylibtest.block.SimpleBlockExample;
 import net.ptcrys.registrylibtest.crop.SimpleCropExample;
@@ -18,6 +21,7 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.permissions.Permission;
 import net.minecraft.server.permissions.PermissionSet;
 import net.minecraft.server.permissions.Permissions;
+import net.minecraft.sounds.SoundEvent;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.item.Items;
@@ -38,11 +42,35 @@ import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.ParseResults;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 
+import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.List;
+import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 
 public final class RegistryLibFeatureGameTests {
+
+    private static final List<String> PIPELINE_CALLBACKS = new ArrayList<>();
+    private static RegistryCore secondCore;
+    private static RegistryEntry<SoundEvent, SoundEvent> secondSound;
+    private static final RegistryEntry<SoundEvent, SoundEvent> FIRST_SOUND = RegistryLibTest.REGISTRYLIB.registry(
+            "pipeline_first", Registries.SOUND_EVENT, List.of(value -> PIPELINE_CALLBACKS.add("first")),
+            key -> SoundEvent.createVariableRangeEvent(key.identifier()), RegistryEntry::new);
+
+    static {
+        try {
+            secondCore = RegistryCore.create(RegistryLibTest.MOD_ID);
+            RegistryLibTest.REGISTRYLIB.addRawLang("registrylibtest.pipeline.first", "First pipeline contribution");
+            secondCore.addRawLang("registrylibtest.pipeline.second", "Second pipeline contribution");
+            secondSound = secondCore.registry(
+                    "pipeline_second", Registries.SOUND_EVENT, List.of(value -> PIPELINE_CALLBACKS.add("second")),
+                    key -> SoundEvent.createVariableRangeEvent(key.identifier()), RegistryEntry::new);
+            RegistryLibTest.REGISTRYLIB.addRegisterCallback(Registries.SOUND_EVENT, () -> PIPELINE_CALLBACKS.add("after_first"));
+            secondCore.addRegisterCallback(Registries.SOUND_EVENT, () -> PIPELINE_CALLBACKS.add("after_second"));
+        } catch (IllegalStateException duplicateCore) {
+            // Keep the baseline runnable so GameTest reports the unsupported scenario.
+        }
+    }
 
     private RegistryLibFeatureGameTests() {}
 
@@ -53,6 +81,12 @@ public final class RegistryLibFeatureGameTests {
     private static void registerTests(RegisterGameTestsEvent event) {
         var environment = RegistryLibGameTestSupport.registerEnvironment(event, "feature_environment");
         RegistryLibGameTestSupport.register(
+                event, environment, "shared_registration_pipeline", 40,
+                RegistryLibFeatureGameTests::sharedRegistrationPipeline);
+        RegistryLibGameTestSupport.register(
+                event, environment, "shared_datagen_pipeline", 40,
+                RegistryLibFeatureGameTests::sharedDatagenPipeline);
+        RegistryLibGameTestSupport.register(
                 event,
                 environment,
                 "state_debug_commands",
@@ -62,6 +96,64 @@ public final class RegistryLibFeatureGameTests {
                 event, environment, "essence_crop", 120, RegistryLibFeatureGameTests::essenceCrop);
         RegistryLibGameTestSupport.register(
                 event, environment, "essence_worldgen", 80, RegistryLibFeatureGameTests::essenceWorldgen);
+    }
+
+    private static void sharedRegistrationPipeline(GameTestHelper helper) {
+        helper.assertTrue(secondCore != null && secondSound != null,
+                Component.literal("multiple Core instances can contribute to one modid"));
+        RegistryCore first = RegistryLibTest.REGISTRYLIB;
+        helper.assertTrue(BuiltInRegistries.SOUND_EVENT.getValue(FIRST_SOUND.identifier()) == FIRST_SOUND.get() && BuiltInRegistries.SOUND_EVENT.getValue(secondSound.identifier()) == secondSound.get(),
+                Component.literal("both contributions reach the Minecraft registry"));
+        helper.assertTrue(first.get("pipeline_second", Registries.SOUND_EVENT) == secondSound && secondCore.get("pipeline_first", Registries.SOUND_EVENT) == FIRST_SOUND,
+                Component.literal("both Core instances see the same entries"));
+        helper.assertTrue(PIPELINE_CALLBACKS.equals(List.of("first", "second", "after_first", "after_second")),
+                Component.literal("all callbacks execute once in registration order"));
+        helper.assertTrue(first.isRegistered(Registries.SOUND_EVENT) && secondCore.isRegistered(Registries.SOUND_EVENT),
+                Component.literal("registration completion is shared"));
+        helper.succeed();
+    }
+
+    private static void sharedDatagenPipeline(GameTestHelper helper) {
+        String modid = "pipeline_" + UUID.randomUUID().toString().replace("-", "");
+        DatagenProbe first = new DatagenProbe(modid);
+        DatagenProbe second;
+        try {
+            second = new DatagenProbe(modid);
+        } catch (IllegalStateException duplicateCore) {
+            helper.assertTrue(false, Component.literal("same-modid Core instances share datagen"));
+            return;
+        }
+        first.enabled = true;
+        second.enabled = true;
+        GeneratorType<List<String>> type = new GeneratorType<>() {};
+        first.addDataGenerator(type, output -> output.add("first"));
+        second.addDataGenerator(type, output -> output.add("second"));
+        DatagenProbe other = new DatagenProbe(modid + "_other");
+        other.enabled = true;
+        other.addDataGenerator(type, output -> output.add("other namespace"));
+        List<String> output = new ArrayList<>();
+        first.genData(type, output);
+        helper.assertTrue(output.containsAll(List.of("first", "second")) && output.size() == 2,
+                Component.literal("one generator consumes callbacks from both Core instances"));
+        helper.assertTrue(first.getDataGenInitializer() == second.getDataGenInitializer(),
+                Component.literal("datapack bootstraps use the same initializer"));
+        helper.assertTrue(first.getDataGenInitializer() != other.getDataGenInitializer(),
+                Component.literal("different namespaces retain separate pipelines"));
+        helper.succeed();
+    }
+
+    private static final class DatagenProbe extends RegistryCore {
+
+        private boolean enabled;
+
+        private DatagenProbe(String modid) {
+            super(modid);
+        }
+
+        @Override
+        public boolean doDatagen() {
+            return enabled;
+        }
     }
 
     private static void stateDebugCommands(GameTestHelper helper) {

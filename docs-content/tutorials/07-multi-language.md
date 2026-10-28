@@ -83,6 +83,14 @@ public static final Component API_TOOLTIP =
 
 Both methods return `Component.translatable(key)`. The `"en_us"` entry is routed through the default lang provider, and every other entry is routed through `locale(...)`.
 
+If your mod uses several Cores with the same modid, their translations are collected into the
+same language files. Different modids keep their translations separate, so multiple mods can use
+`lang(Map)` during the same datagen run without configuring aliases.
+
+Register a custom provider constant once and reuse it wherever needed. Registering a different
+provider under the same provider name fails. Configure `withLangAlias(...)` before any module adds
+translations for that locale; changing an alias after its callbacks are registered is rejected.
+
 ## Step 3 - Add Extra Locales
 
 The shortest path for registration chains is the `lang(Map)` builder method shown in Step 1. For raw text, use `langPair(...)` or `lang(key, Map)` from Step 2.
