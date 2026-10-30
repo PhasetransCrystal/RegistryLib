@@ -1,12 +1,12 @@
 package net.ptcrys.registrylibtest.recipe;
 
-import net.ptcrys.registrylib.util.ColorUtil;
 import net.ptcrys.registrylib.util.ImageUtil;
 import net.ptcrys.registrylib.util.entry.BlockEntityTypeEntry;
 import net.ptcrys.registrylib.util.entry.BlockEntry;
 import net.ptcrys.registrylib.util.entry.RecipeTypeEntry;
 import net.ptcrys.registrylibtest.ModRegistryCore;
 import net.ptcrys.registrylibtest.RegistryLibTest;
+import net.ptcrys.registrylibtest.TestTextureColor;
 
 import net.minecraft.core.registries.Registries;
 import net.minecraft.tags.BlockTags;
@@ -57,9 +57,8 @@ public class FullRecipeExample {
             .register();
 
     // ── 自定义工厂配方类型注册 ────────────────────────────────────────────
-    // Register with custom RecipeType and RecipeSerializer factories.
+    // Register with a custom RecipeType factory.
     // typeFactory: override the default RecipeType.simple(id) creation.
-    // serializerFactory: provide a pre-built RecipeSerializer instead of codec+streamCodec.
 
     public static final RecipeTypeEntry<InfuserRecipe> INFUSER_CUSTOM = RegistryLibTest.REGISTRYLIB
             .<InfuserRecipe>recipeType("infuser_custom")
@@ -162,7 +161,7 @@ public class FullRecipeExample {
             .addTag(BlockTags.MINEABLE_WITH_PICKAXE)
             .texture(
                     () -> ImageUtil.generateIcon(
-                            ColorUtil.generateRandomMutedColor(), ImageUtil.SQUARE, Color.YELLOW))
+                            TestTextureColor.muted("infuser_t1"), ImageUtil.SQUARE, Color.YELLOW))
             .register();
 
     // ── T2 注入器方块 ─────────────────────────────────────────────────────
@@ -177,7 +176,7 @@ public class FullRecipeExample {
             .addTag(BlockTags.MINEABLE_WITH_PICKAXE, BlockTags.NEEDS_IRON_TOOL)
             .texture(
                     () -> ImageUtil.generateIcon(
-                            ColorUtil.generateRandomMutedColor(), ImageUtil.SQUARE, Color.MAGENTA))
+                            TestTextureColor.muted("infuser_t2"), ImageUtil.SQUARE, Color.MAGENTA))
             .register();
 
     // ── 方块实体（共享） ────────────────────────────────────────────────────

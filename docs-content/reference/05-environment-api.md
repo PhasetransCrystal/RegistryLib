@@ -67,7 +67,6 @@ The environment API is for attachment-backed state and datapack-backed worldgen.
 
 | Method | Parameters | Description |
 | --- | --- | --- |
-| `syncOnModify(enabled)` | `boolean` | Request sync after `set` or `modify` when a sync codec exists |
 | `sync(streamCodec)` | `StreamCodec<? super RegistryFriendlyByteBuf, T>` | Configure sync and enable sync-on-modify |
 | `debug()` | - | Enable read-only debug commands with default permissions |
 | `debug(configurator)` | `UnaryOperator<StateDebugConfig>` | Enable and configure debug command permissions and writability |

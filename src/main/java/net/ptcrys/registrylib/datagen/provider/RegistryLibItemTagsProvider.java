@@ -23,6 +23,7 @@ public class RegistryLibItemTagsProvider extends RegistryLibTagsProvider.Intrins
 
     private final CompletableFuture<TagsProvider.TagLookup<Block>> blockTags;
     private final Map<TagKey<Block>, TagKey<Item>> tagsToCopy = new Reference2ReferenceOpenHashMap<>();
+    private CompletableFuture<HolderLookup.Provider> contentsProvider;
 
     public RegistryLibItemTagsProvider(
                                        RegistryCore owner,
@@ -48,22 +49,25 @@ public class RegistryLibItemTagsProvider extends RegistryLibTagsProvider.Intrins
 
     @Override
     protected CompletableFuture<HolderLookup.Provider> createContentsProvider() {
-        return super.createContentsProvider()
-                .thenCombineAsync(
-                        this.blockTags,
-                        (provider, blockTagLookup) -> {
-                            this.tagsToCopy.forEach(
-                                    (blockTagKey, itemTagKey) -> {
-                                        TagBuilder tagbuilder = this.getOrCreateRawBuilder(itemTagKey);
-                                        Optional<TagBuilder> optional = blockTagLookup.apply(blockTagKey);
-                                        optional
-                                                .orElseThrow(
-                                                        () -> new IllegalStateException(
-                                                                "Missing block tag " + itemTagKey.location()))
-                                                .build()
-                                                .forEach(tagbuilder::add);
-                                    });
-                            return provider;
-                        });
+        if (contentsProvider == null) {
+            contentsProvider = super.createContentsProvider()
+                    .thenCombineAsync(
+                            this.blockTags,
+                            (provider, blockTagLookup) -> {
+                                this.tagsToCopy.forEach(
+                                        (blockTagKey, itemTagKey) -> {
+                                            TagBuilder tagbuilder = this.getOrCreateRawBuilder(itemTagKey);
+                                            Optional<TagBuilder> optional = blockTagLookup.apply(blockTagKey);
+                                            optional
+                                                    .orElseThrow(
+                                                            () -> new IllegalStateException(
+                                                                    "Missing block tag " + itemTagKey.location()))
+                                                    .build()
+                                                    .forEach(tagbuilder::add);
+                                        });
+                                return provider;
+                            });
+        }
+        return contentsProvider;
     }
 }

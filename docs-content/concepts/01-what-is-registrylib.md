@@ -50,14 +50,14 @@ One chain registers the block, generates its model, sets its display name, creat
 
 ## Lineage
 
-RegistryLib is inspired by **Registrate** (tterrag's library for Forge), but rebuilt from the ground up for modern NeoForge. Key differences include:
+RegistryLib is a **second-generation modification** of **Registrate** (tterrag's library for Forge). GregTech Odyssey (GTO) first forked Registrate as RegistryLib, changed the package to `com.gtodyssey.registrylib`, and updated it to NeoForge. This fork continues that chain under the package `net.ptcrys.registrylib` and extends the library. Key differences include:
 
-- Native support for NeoForge's `DeferredHolder` and `RegisterEvent`
+- Native support for NeoForge's `RegisterEvent` registration lifecycle
 - Integrated datagen (models, lang, loot, tags) within the builder chain
 - The [Group system](/how-to/register-items) for sharing defaults across entries
-- Specialized entry types (`ItemEntry`, `BlockEntry`, `FluidEntry`, etc.) built on a shared `AbstractHolderEntry` base with safe access (`isBound()`, `getOptional()`)
+- Specialized entry types (`ItemEntry`, `BlockEntry`, `FluidEntry`, etc.) built on a shared `RegistryEntry` hierarchy with safe access (`isBound()`, `getOptional()`)
 - Support for the component item / attachment pattern
-- Thread-safe internals (`FreezableRegistry`, `ConcurrentHashMap`-backed caches, `ThreadLocal` tooltip resolution)
+- Thread-safe internals (`ConcurrentHashMap`-backed caches, `ThreadLocal` tooltip resolution)
 
 ## See Also
 

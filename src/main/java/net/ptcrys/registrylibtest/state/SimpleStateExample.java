@@ -23,5 +23,25 @@ public final class SimpleStateExample {
             .debug()
             .register();
 
+    public static final WorldStateEntry<Integer> PERMISSION_PRIVATE_READ = RegistryLibTest.REGISTRYLIB
+            .worldState("permission_private_read", Codec.INT, () -> 0)
+            .debug(config -> config.readPermission(4))
+            .register();
+
+    public static final WorldStateEntry<Integer> PERMISSION_PUBLIC_READ = RegistryLibTest.REGISTRYLIB
+            .worldState("permission_public_read", Codec.INT, () -> 0)
+            .debug(config -> config.readPermission(0))
+            .register();
+
+    public static final WorldStateEntry<Integer> PERMISSION_PRIVATE_WRITE = RegistryLibTest.REGISTRYLIB
+            .worldState("permission_private_write", Codec.INT, () -> 0)
+            .debug(config -> config.writable(true).readPermission(4).writePermission(4))
+            .register();
+
+    public static final WorldStateEntry<Integer> PERMISSION_WRITE_ONLY = RegistryLibTest.REGISTRYLIB
+            .worldState("permission_write_only", Codec.INT, () -> 0)
+            .debug(config -> config.writable(true).readPermission(4).writePermission(0))
+            .register();
+
     private SimpleStateExample() {}
 }

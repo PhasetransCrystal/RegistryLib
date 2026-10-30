@@ -63,6 +63,8 @@ public abstract class AbstractStateBuilder<T, P, S extends AbstractStateBuilder<
 
     protected abstract String attachmentPrefix();
 
+    protected abstract StateScope stateScope();
+
     protected abstract AbstractStateEntry<T> createEntry(
                                                          Identifier identifier,
                                                          Codec<T> codec,
@@ -79,6 +81,15 @@ public abstract class AbstractStateBuilder<T, P, S extends AbstractStateBuilder<
         if (registered) {
             throw new IllegalStateException("Builder already registered: " + name);
         }
+        Identifier identifier = Identifier.fromNamespaceAndPath(core.getModid(), name);
+        core.getStateEntries().stream()
+                .filter(existing -> existing.identifier().equals(identifier))
+                .findFirst()
+                .ifPresent(
+                        existing -> {
+                            throw new IllegalStateException(
+                                    "Duplicate state id: " + identifier + " is already registered as " + existing.scope().id() + " and cannot also be registered as " + stateScope().id());
+                        });
         registered = true;
         var attachmentBuilder = core.attachmentType(attachmentPrefix() + name, defaultValueFactory)
                 .serialize(codec.fieldOf("value"));
@@ -87,7 +98,7 @@ public abstract class AbstractStateBuilder<T, P, S extends AbstractStateBuilder<
         }
         AttachmentTypeEntry<T> attachment = attachmentBuilder.register();
         AbstractStateEntry<T> entry = createEntry(
-                Identifier.fromNamespaceAndPath(core.getModid(), name),
+                identifier,
                 codec,
                 attachment,
                 debugConfig,

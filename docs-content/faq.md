@@ -10,11 +10,11 @@ description: Frequently asked questions about RegistryLib.
 
 ### What Minecraft / NeoForge versions does RegistryLib support?
 
-RegistryLib targets **NeoForge 26.1** on **Minecraft 1.21+**. Check the [GitHub releases](https://github.com/PhasetransCrystal/RegistryLib/releases) page for the exact version matrix.
+RegistryLib targets **NeoForge 26.1.2.71** on **Minecraft 26.1.2**. Check the [GitHub releases](https://github.com/PhasetransCrystal/RegistryLib/releases) page for the exact version matrix.
 
 ### Is RegistryLib a fork of Registrate?
 
-RegistryLib is inspired by [Registrate](https://github.com/tterrag1098/Registrate) but is a clean-room rebuild for modern NeoForge. It shares the fluent-API philosophy but differs in implementation, type hierarchy, and feature set. See [What is RegistryLib?](/concepts/what-is-registrylib) for a detailed comparison.
+RegistryLib is a **second-generation modification** of [Registrate](https://github.com/tterrag1098/Registrate), not a clean-room rewrite. GregTech Odyssey (GTO) first forked Registrate as RegistryLib, changed the package to `com.gtodyssey.registrylib`, and updated it to NeoForge. This fork continues that chain under the package `net.ptcrys.registrylib` and extends the library with additional APIs and data generation features. See [What is RegistryLib?](/concepts/what-is-registrylib) for a detailed comparison.
 
 ### Can I use RegistryLib alongside vanilla registration?
 
@@ -26,8 +26,8 @@ Yes. RegistryLib does not replace the NeoForge registry system; it wraps it. You
 
 ### Gradle cannot resolve the RegistryLib dependency
 
-1. Ensure your `settings.gradle` or `build.gradle` includes the Gtodyssey Maven repository: `https://maven.gtodyssey.com/releases`.
-2. Check your network can reach `maven.gtodyssey.com`.
+1. Ensure your `settings.gradle` or `build.gradle` includes the Ptcrys Maven repository: `https://maven.ptcrys.net/releases`.
+2. Check your network can reach `maven.ptcrys.net`.
 3. Run `./gradlew build --refresh-dependencies` to clear cached resolution failures.
 
 See [Installation & Setup](/tutorials/installation) for the full walkthrough.

@@ -49,14 +49,13 @@ public final class StateDebugCommands {
                                 Commands.literal("state")
                                         .then(
                                                 Commands.literal("list")
-                                                        .requires(source -> hasPermission(source, 2))
                                                         .executes(StateDebugCommands::listStates))
                                         .then(
                                                 Commands.literal("get")
                                                         .then(
                                                                 Commands.argument(
                                                                         "id", ResourceKeyArgument.key(Registries.CUSTOM_STAT))
-                                                                        .suggests((ctx, builder) -> suggestStateIds(builder))
+                                                                        .suggests(StateDebugCommands::suggestReadableStateIds)
                                                                         .executes(StateDebugCommands::getWorldState)
                                                                         .then(
                                                                                 Commands.argument("chunkX", IntegerArgumentType.integer())
@@ -69,7 +68,7 @@ public final class StateDebugCommands {
                                                         .then(
                                                                 Commands.argument(
                                                                         "id", ResourceKeyArgument.key(Registries.CUSTOM_STAT))
-                                                                        .suggests((ctx, builder) -> suggestWritableStateIds(builder))
+                                                                        .suggests(StateDebugCommands::suggestWritableStateIds)
                                                                         .then(
                                                                                 Commands.argument("tail", StringArgumentType.greedyString())
                                                                                         .executes(StateDebugCommands::setState))))
@@ -78,7 +77,7 @@ public final class StateDebugCommands {
                                                         .then(
                                                                 Commands.argument(
                                                                         "id", ResourceKeyArgument.key(Registries.CUSTOM_STAT))
-                                                                        .suggests((ctx, builder) -> suggestStateIds(builder))
+                                                                        .suggests(StateDebugCommands::suggestReadableStateIds)
                                                                         .executes(StateDebugCommands::debugWorldState)
                                                                         .then(
                                                                                 Commands.argument("chunkX", IntegerArgumentType.integer())
@@ -91,7 +90,7 @@ public final class StateDebugCommands {
 
     private static int listStates(CommandContext<CommandSourceStack> context) {
         StringBuilder builder = new StringBuilder("Registered RegistryLib states:");
-        allStates()
+        readableStates(context.getSource())
                 .forEach(
                         entry -> builder
                                 .append('\n')
@@ -153,7 +152,7 @@ public final class StateDebugCommands {
         Identifier id = getId(context, "id");
         String raw = getRawId(context, "id");
         String tail = StringArgumentType.getString(context, "tail");
-        if (canParseChunkSetInput(tail) && findUniqueState(context, StateScope.CHUNK, false).isPresent()) {
+        if (canParseChunkSetInput(tail) && findUniqueState(context, StateScope.CHUNK, true).isPresent()) {
             return setChunkState(context);
         }
         return setWorldState(context);
@@ -272,7 +271,7 @@ public final class StateDebugCommands {
                                                                                                                                            throws CommandSyntaxException {
         Identifier id = getId(context, "id");
         String raw = getRawId(context, "id");
-        List<StateEntry<?>> matches = matchingStates(id, raw, scope, writable);
+        List<StateEntry<?>> matches = matchingStates(context.getSource(), id, raw, scope, writable);
         if (matches.size() > 1) {
             throw CommandSyntaxException.BUILT_IN_EXCEPTIONS
                     .dispatcherParseException()
@@ -282,10 +281,14 @@ public final class StateDebugCommands {
     }
 
     private static List<StateEntry<?>> matchingStates(
-                                                      Identifier id, String raw, StateScope scope, boolean writable) {
+                                                      CommandSourceStack source,
+                                                      Identifier id,
+                                                      String raw,
+                                                      StateScope scope,
+                                                      boolean writable) {
         return allStates().stream()
                 .filter(e -> e.scope() == scope)
-                .filter(e -> !writable || e.debugConfig().writable())
+                .filter(e -> writable ? canWrite(source, e) : canRead(source, e))
                 .filter(
                         e -> e.identifier().equals(id) || (!raw.contains(":") && e.identifier().getPath().equals(raw)))
                 .toList();
@@ -341,27 +344,43 @@ public final class StateDebugCommands {
         return "";
     }
 
-    private static CompletableFuture<Suggestions> suggestStateIds(SuggestionsBuilder builder) {
-        return suggestStateIds(builder, false);
+    private static CompletableFuture<Suggestions> suggestReadableStateIds(
+                                                                          CommandContext<CommandSourceStack> context,
+                                                                          SuggestionsBuilder builder) {
+        return suggestStateIds(context, builder, false);
     }
 
     private static CompletableFuture<Suggestions> suggestWritableStateIds(
+                                                                          CommandContext<CommandSourceStack> context,
                                                                           SuggestionsBuilder builder) {
-        return suggestStateIds(builder, true);
+        return suggestStateIds(context, builder, true);
     }
 
     private static CompletableFuture<Suggestions> suggestStateIds(
-                                                                  SuggestionsBuilder builder, boolean writableOnly) {
+                                                                  CommandContext<CommandSourceStack> context,
+                                                                  SuggestionsBuilder builder,
+                                                                  boolean writableOnly) {
         SuggestionsBuilder argumentBuilder = builder.createOffset(currentArgumentStart(builder));
         String remaining = argumentBuilder.getRemainingLowerCase();
         allStates().stream()
-                .filter(e -> e.debugConfig().enabled())
-                .filter(e -> !writableOnly || e.debugConfig().writable())
+                .filter(e -> writableOnly ? canWrite(context.getSource(), e) : canRead(context.getSource(), e))
                 .map(StateEntry::identifier)
                 .filter(id -> matchesIdSuggestion(id, remaining))
                 .map(Identifier::toString)
                 .forEach(argumentBuilder::suggest);
         return argumentBuilder.buildFuture();
+    }
+
+    private static Collection<StateEntry<?>> readableStates(CommandSourceStack source) {
+        return allStates().stream().filter(entry -> canRead(source, entry)).toList();
+    }
+
+    private static boolean canRead(CommandSourceStack source, StateEntry<?> entry) {
+        return entry.debugConfig().enabled() && hasPermission(source, entry.debugConfig().readPermission());
+    }
+
+    private static boolean canWrite(CommandSourceStack source, StateEntry<?> entry) {
+        return entry.debugConfig().enabled() && entry.debugConfig().writable() && hasPermission(source, entry.debugConfig().writePermission());
     }
 
     private static int currentArgumentStart(SuggestionsBuilder builder) {

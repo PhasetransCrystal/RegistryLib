@@ -13,7 +13,7 @@ description: Common errors and how to fix them.
 **Cause:** Gradle cannot reach the Maven repository.
 
 **Fix:**
-1. Ensure your `settings.gradle` or `build.gradle` includes the Gtodyssey Maven repository.
+1. Ensure your `settings.gradle` or `build.gradle` includes the Ptcrys Maven repository.
 2. Verify the URL is `https://maven.ptcrys.net/releases`.
 3. Check your network connectivity to `maven.ptcrys.net`.
 
@@ -24,7 +24,7 @@ description: Common errors and how to fix them.
 **Fix:** Ensure you are using `implementation` (not `compileOnly`) in your `build.gradle` dependencies:
 ```groovy
 dependencies {
-    implementation 'net.ptcrysb:7.0.8'
+    implementation 'net.ptcrys:registrylib:<version>'
 }
 ```
 

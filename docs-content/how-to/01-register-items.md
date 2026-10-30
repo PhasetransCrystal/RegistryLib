@@ -103,7 +103,7 @@ REGISTRYLIB.item("nickel_dust")
 For helper methods that pass texture paths around, prefer `TextureRef`:
 
 ```java
-TextureRef dustTemplate = REGISTRYLIB.textureRef("item/templates/dust");
+TextureRef dustTemplate = REGISTRYLIB.texture("item/templates/dust");
 
 REGISTRYLIB.item("silver_dust")
         .visual(ItemVisualPreset.tintedTemplate(dustTemplate, RgbColor.of(0xD7D7E8)))

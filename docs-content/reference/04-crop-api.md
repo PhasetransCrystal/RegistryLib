@@ -23,7 +23,7 @@ The crop API is for registering carrot-like age crops and their generated seed i
 | `growthRoll(callback)` | `RegistryLibCropBlock.GrowthRoll` | Decide whether a random tick may advance growth |
 | `onHarvest(callback)` | `RegistryLibCropBlock.HarvestCallback` | Run server harvest logic before right-click replanting |
 | `rightClickHarvest(enabled)` | `boolean` | Enable or disable mature right-click harvest |
-| `seedItem(configurator)` | `Consumer<ItemBuilder<Item, RegistryCore>>` | Configure the generated seed item |
+| `seedItem(configurator)` | `Consumer<ItemBuilder<BlockItem, RegistryCore>>` | Configure the generated seed item |
 | `produce(supplier)` | `Supplier<? extends Item>` | Configure mature crop loot |
 | `stageTextures(textures...)` | `TextureRef...` | Generate crop stage blockstate/model data |
 | `register()` | - | Register crop block and seed item, returning `BlockEntry<RegistryLibCropBlock>` |

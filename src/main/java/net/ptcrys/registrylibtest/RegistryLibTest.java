@@ -1,6 +1,5 @@
 package net.ptcrys.registrylibtest;
 
-import net.ptcrys.registrylib.util.ColorUtil;
 import net.ptcrys.registrylib.util.ImageUtil;
 import net.ptcrys.registrylibtest.advancement.FullAdvancementExample;
 import net.ptcrys.registrylibtest.advancement.SimpleAdvancementExample;
@@ -138,17 +137,20 @@ public class RegistryLibTest {
         var _api1 = ApiImprovementExample.VANILLA_IRON_INGOT;
         var _api2 = ApiImprovementExample.API_NOTE;
 
+        // Keep the default stress sample; opt out for quick local runs.
+        int stressItemCount = Boolean.parseBoolean(System.getenv("REGISTRYLIBTEST_FAST_RUN")) ? 0 : 1000;
         long time = System.nanoTime();
-        for (int i = 0; i < 1000; i++) {
+        for (int i = 0; i < stressItemCount; i++) {
+            String name = "test_item_" + i;
             REGISTRYLIB
-                    .item("test_item_" + i)
+                    .item(name)
                     .langCn("测试物品 " + i)
                     .lang("Test Item " + i)
                     .texture(
-                            () -> ImageUtil.generateIcon(ColorUtil.generateRandomVibrantColor(), ImageUtil.STAR))
+                            () -> ImageUtil.generateIcon(TestTextureColor.vibrant(name), ImageUtil.STAR))
                     .register();
         }
-        LOGGER.info("register 1000 items in {} ms", (System.nanoTime() - time) / 1000000.0);
+        LOGGER.info("register {} stress items in {} ms", stressItemCount, (System.nanoTime() - time) / 1000000.0);
     }
 
     public RegistryLibTest(IEventBus modEventBus, ModContainer modContainer) {

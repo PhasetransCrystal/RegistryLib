@@ -35,6 +35,11 @@ public final class WorldStateBuilder<T, P>
     }
 
     @Override
+    protected StateScope stateScope() {
+        return StateScope.WORLD;
+    }
+
+    @Override
     protected AbstractStateEntry<T> createEntry(
                                                 Identifier identifier,
                                                 Codec<T> codec,

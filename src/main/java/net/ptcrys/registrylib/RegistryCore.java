@@ -99,6 +99,7 @@ import net.neoforged.neoforge.registries.RegisterEvent;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import it.unimi.dsi.fastutil.objects.ReferenceOpenHashSet;
+import lombok.Getter;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.logging.log4j.Logger;
 import org.jetbrains.annotations.NotNull;
@@ -137,6 +138,9 @@ public class RegistryCore {
 
     // All Core instances for a namespace contribute to this single pipeline.
     private static final ConcurrentHashMap<String, RegistrationPipeline> PIPELINES = new ConcurrentHashMap<>();
+    // RegisterEvent is global, so a Core created after an event must see its phase too.
+    private static final Set<ResourceKey<? extends Registry<?>>> CLOSED_ENTRY_REGISTRIES = ConcurrentHashMap.newKeySet();
+    private static final Set<ResourceKey<? extends Registry<?>>> COMPLETED_REGISTRIES = ConcurrentHashMap.newKeySet();
     private final RegistrationPipeline pipeline;
 
     private static final class RegistrationPipeline {
@@ -144,7 +148,6 @@ public class RegistryCore {
         private final NestedMap<ResourceKey<? extends Registry<?>>, String, RegistryEntry<?, ?>> registryEntry = NestedMap.createIdentity(LinkedHashMap::new);
         private final MultiMap<ResourceKey<? extends Registry<?>>, Registration<?, ?>> registrations = MultiMap.createIdentity(ArrayList::new);
         private final MultiMap<ResourceKey<? extends Registry<?>>, Runnable> afterRegisterCallbacks = MultiMap.createIdentity(ArrayList::new);
-        private final Set<ResourceKey<? extends Registry<?>>> completedRegistrations = ConcurrentHashMap.newKeySet();
         private final MultiMap<ResourceKey<CreativeModeTab>, Consumer<CreativeModeTabModifier>> creativeModeTabModifiers = MultiMap.createIdentity(ArrayList::new);
         private final ListRegistry<Pair<Supplier<EntityType<?>>, Supplier<AttributeSupplier.Builder>>> entityAttributes = new ListRegistry<>();
         private final ListRegistry<Consumer<RegisterSpawnPlacementsEvent>> spawnPlacements = new ListRegistry<>();
@@ -158,13 +161,14 @@ public class RegistryCore {
         private final StateRegistryManager stateRegistryManager = new StateRegistryManager();
         private RegistryLibDataProvider provider;
         private DataProviderInitializer initializer;
+        private boolean skipErrors;
     }
 
+    @Getter
     protected ResourceKey<CreativeModeTab> defaultCreativeModeTab = null;
 
+    @Getter
     private final String modid;
-
-    private boolean skipErrors;
 
     // === Constructor + Factory ===
 
@@ -196,14 +200,6 @@ public class RegistryCore {
         return Environment.isDatagenStatic();
     }
 
-    public String getModid() {
-        return modid;
-    }
-
-    public ResourceKey<CreativeModeTab> getDefaultCreativeModeTab() {
-        return defaultCreativeModeTab;
-    }
-
     public int priority() {
         return 0;
     }
@@ -218,18 +214,22 @@ public class RegistryCore {
     @SuppressWarnings("unchecked")
     public <R, T extends R> Collection<RegistryEntry<R, T>> getAll(
                                                                    ResourceKey<? extends Registry<R>> type) {
-        return (Collection) pipeline.registryEntry.get(type).values();
+        return (Collection) List.copyOf(pipeline.registryEntry.get(type).values());
     }
 
     // === Callback Management ===
 
     public <R> void addRegisterCallback(
                                         ResourceKey<? extends Registry<R>> registryType, Runnable callback) {
+        if (COMPLETED_REGISTRIES.contains(registryType)) {
+            throw new IllegalStateException(
+                    "Cannot add a register callback after registry registration has completed: " + registryType.identifier());
+        }
         pipeline.afterRegisterCallbacks.put(registryType, callback);
     }
 
     public <R> boolean isRegistered(ResourceKey<? extends Registry<R>> registryType) {
-        return pipeline.completedRegistrations.contains(registryType);
+        return COMPLETED_REGISTRIES.contains(registryType);
     }
 
     // === Data Generation ===
@@ -246,12 +246,12 @@ public class RegistryCore {
                                      GeneratorType<? extends P> type,
                                      Consumer<? extends P> cons) {
         if (!doDatagen()) return;
+        addDataGenerator(type, cons);
         @SuppressWarnings("null")
         Consumer<?> existing = pipeline.dataGensByEntry.put(type, Pair.of(key, name), cons);
         if (existing != null) {
             pipeline.dataGens.remove(type, existing);
         }
-        addDataGenerator(type, cons);
     }
 
     public <T> void addDataGenerator(GeneratorType<? extends T> type, Consumer<? extends T> cons) {
@@ -451,7 +451,7 @@ public class RegistryCore {
                             try {
                                 ((Consumer<T>) cons).accept(gen);
                             } catch (Exception e) {
-                                if (skipErrors) {
+                                if (pipeline.skipErrors) {
                                     log.error(e);
                                 } else {
                                     throw new RuntimeException(e);
@@ -466,7 +466,7 @@ public class RegistryCore {
         if (skipErrors && Environment.isProdStatic()) {
             log.error("Ignoring skipErrors(true) as this is not a development environment!");
         } else {
-            this.skipErrors = skipErrors;
+            pipeline.skipErrors = skipErrors;
         }
         return this;
     }
@@ -567,6 +567,16 @@ public class RegistryCore {
                                                          List<Consumer<? super T>> callbacks,
                                                          Function<ResourceKey<R>, ? extends T> factory,
                                                          Function<ResourceKey<R>, ? extends RegistryEntry<R, T>> entryFactory) {
+        if (CLOSED_ENTRY_REGISTRIES.contains(registryType)) {
+            Identifier identifier = Identifier.fromNamespaceAndPath(modid, name);
+            throw new IllegalStateException(
+                    "Cannot register entry after registry registration has started: " + registryType.identifier() + " / " + identifier);
+        }
+        if (pipeline.registryEntry.get(registryType, name) != null) {
+            Identifier identifier = Identifier.fromNamespaceAndPath(modid, name);
+            throw new IllegalStateException(
+                    "Duplicate registration for registry " + registryType.identifier() + ": " + identifier);
+        }
         var reg = new Registration<>(
                 registryType,
                 Identifier.fromNamespaceAndPath(modid, name),
@@ -1427,8 +1437,9 @@ public class RegistryCore {
                     var builder = CreativeModeTab.builder()
                             .icon(
                                     () -> getAll(Registries.ITEM).stream()
+                                            .filter(ItemEntry.class::isInstance)
                                             .findFirst()
-                                            .map(ItemEntry::cast)
+                                            .map(ItemEntry.class::cast)
                                             .map(ItemEntry::asStack)
                                             .orElse(new ItemStack(Items.AIR)))
                             .title(this.addRawLang(langKey, enUs));
@@ -1442,6 +1453,7 @@ public class RegistryCore {
     static void onRegister(RegisterEvent event) {
         var type = event.getRegistry();
         var key = type.key();
+        CLOSED_ENTRY_REGISTRIES.add(key);
         REGISTRY_CORES.forEach(
                 core -> core.pipeline.registrations
                         .remove(key)
@@ -1451,8 +1463,8 @@ public class RegistryCore {
                                         r.register((Registry) type);
                                     } catch (Exception ex) {
                                         String err = "Unexpected error while registering entry " + r.key.identifier() + " to registry " + key.identifier();
-                                        if (core.skipErrors) {
-                                            log.error(DebugMarkers.register(), err);
+                                        if (core.pipeline.skipErrors) {
+                                            log.error(DebugMarkers.register(), err, ex);
                                         } else {
                                             throw new RuntimeException(err, ex);
                                         }
@@ -1462,10 +1474,10 @@ public class RegistryCore {
 
     static void onRegisterLate(RegisterEvent event) {
         var type = event.getRegistryKey();
+        COMPLETED_REGISTRIES.add(type);
         REGISTRY_CORES.forEach(
                 core -> {
                     core.pipeline.afterRegisterCallbacks.remove(type).forEach(Runnable::run);
-                    core.pipeline.completedRegistrations.add(type);
                 });
     }
 
@@ -1529,8 +1541,11 @@ public class RegistryCore {
         @SuppressWarnings("unchecked")
         private void register(Registry<R> registry) {
             T value = creator.apply(key);
-            this.entry.bound(value);
+            if (entry.isBound()) {
+                throw new IllegalStateException("Registry entry is already bound: " + key);
+            }
             ((WritableRegistry<R>) registry).register(key, value, RegistrationInfo.BUILT_IN);
+            this.entry.bound(value);
             callbacks.forEach(c -> c.accept(value));
             // Release references to builder-capturing lambdas; Registration is removed from
             // the registrations map after this call, but nulling eagerly cuts the reference

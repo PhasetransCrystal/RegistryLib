@@ -56,7 +56,7 @@ public static final BlockEntry<Block> TIN_BLOCK = REGISTRYLIB
 For batch registration, move the visual rule into a preset:
 
 ```java
-TextureRef storageTemplate = REGISTRYLIB.textureRef("block/templates/storage_cube");
+TextureRef storageTemplate = REGISTRYLIB.texture("block/templates/storage_cube");
 
 REGISTRYLIB.block("lead_block")
         .visual(BlockVisualPreset.constantTintedCube(storageTemplate, RgbColor.of(0x6E7380)))
@@ -67,8 +67,8 @@ REGISTRYLIB.block("lead_block")
 For layered block models, combine a particle texture with one or more `BlockModelLayer` entries:
 
 ```java
-TextureRef base = REGISTRYLIB.textureRef("block/templates/storage_cube");
-TextureRef overlay = REGISTRYLIB.textureRef("block/templates/storage_overlay");
+TextureRef base = REGISTRYLIB.texture("block/templates/storage_cube");
+TextureRef overlay = REGISTRYLIB.texture("block/templates/storage_overlay");
 
 REGISTRYLIB.block("layered_storage_block")
         .visual(BlockVisualPreset.layeredCube(
@@ -122,7 +122,7 @@ The block is excluded from NeoForge's blockstate validation so datagen no longer
 | `constantTint(texturePath, RgbColor)` | Generate a tinted cube block model, register block tint, and generate a tinted BlockItem model from a shared texture |
 | `constantTint(texture, RgbColor)` | TextureRef variant for shared textures |
 | `tintSource(sources...)` | Generate a BlockItem model with custom item tint sources |
-| `blockTintSource(sources...)` | Register runtime block/world tint sources |
+| `blockTintSource(supplier)` | Register runtime block/world tint sources (`Supplier<Supplier<BlockTintSource[]>>`) |
 | `blockConstantTint(RgbColor)` / `blockConstantTint(ArgbColor)` | Register block tint colors explicitly |
 | `layeredCube(particle, layers...)` | Generate a full-cube layered block model with per-layer tint and translucency settings |
 | `debugTint()` | Log and validate model tint indices against configured tint sources |

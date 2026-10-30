@@ -6,10 +6,10 @@ description: Reference for all RegistryLib entry wrapper types.
 
 # Entry Types
 
-RegistryLib provides specialized Entry types that wrap `DeferredHolder` with convenience helpers. All entry types extend `RegistryEntry<R, T>` and are lazily resolved —the underlying object is created only when NeoForge's registration event fires.
+RegistryLib provides specialized Entry types that wrap registered objects with convenience helpers. All entry types extend `RegistryEntry<R, T>` and are lazily resolved —the underlying object is created only when NeoForge's registration event fires.
 
 :::note
-All entry types also implement `Holder`-style interfaces. When an API expects a `Holder<Item>`, `Holder<Block>`, or `Holder<Fluid>`, you can pass the entry directly.
+Holder-backed entry types (`ItemEntry`, `BlockEntry`, `FluidEntry`) implement `Holder` through `AbstractHolderEntry`. When an API expects a `Holder<Item>`, `Holder<Block>`, or `Holder<Fluid>`, you can pass the entry directly.
 :::
 
 ## Inheritance Hierarchy
@@ -40,7 +40,7 @@ All `RegistryEntry<R, T>` subclasses inherit these methods:
 | `get()` | `T` | Get the registered object. **Throws `IllegalStateException`** if the entry has not been bound yet (i.e. accessed before registration completes). |
 | `getOptional()` | `Optional<T>` | Get the registered object wrapped in an `Optional`. Returns `Optional.empty()` if the entry has not been bound yet. Safe to call at any time. |
 | `isBound()` | `boolean` | Returns `true` if the entry has been bound to a registered object. Use this to check whether `get()` is safe to call. |
-| `key()` | `ResourceKey<R>` | The registry key for this entry |
+| `getKey()` | `ResourceKey<R>` | The registry key for this entry |
 | `identifier()` | `Identifier` | The resource identifier for this entry |
 
 :::warning
@@ -107,7 +107,7 @@ The most feature-rich entry type. Provides access to the entire fluid family (so
 | `get()` | `T` | Get the flowing fluid (throws `IllegalStateException` if unbound) |
 | `getSource()` | `Fluid` | Get the source fluid |
 | `getType()` | `FluidType` | Get the FluidType |
-| `getBlock()` | `LiquidBlock` | Get the fluid block (if registered) |
+| `getBlock()` | `B extends Block` | Get the fluid block if registered, otherwise `null` |
 | `getBucket()` | `Item` | Get the bucket item (if registered) |
 | `asStack()` | `FluidStack` | Create a FluidStack (1000 mB) |
 | `asStack(long amount)` | `FluidStack` | Create a FluidStack with the specified amount |

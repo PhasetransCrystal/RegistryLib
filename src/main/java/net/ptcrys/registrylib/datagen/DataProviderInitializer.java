@@ -76,8 +76,9 @@ public class DataProviderInitializer {
 
     public void addDependency(
                               ProviderType<?> dependent, ProviderType<? extends RegistryLibLookupFillerProvider> parent) {
-        var old = providerDependencies.put(dependent, parent);
-        if (old != null) throw new IllegalStateException("Providers can have only 1 prerequisite");
+        if (providerDependencies.putIfAbsent(dependent, parent) != null) {
+            throw new IllegalStateException("Providers can have only 1 prerequisite");
+        }
     }
 
     public record Sorted(

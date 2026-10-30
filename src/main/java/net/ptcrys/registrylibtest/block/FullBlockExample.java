@@ -2,11 +2,11 @@ package net.ptcrys.registrylibtest.block;
 
 import net.ptcrys.registrylib.Group;
 import net.ptcrys.registrylib.tooltip.SubNode;
-import net.ptcrys.registrylib.util.ColorUtil;
 import net.ptcrys.registrylib.util.ImageUtil;
 import net.ptcrys.registrylib.util.entry.BlockEntry;
 import net.ptcrys.registrylibtest.ModRegistryCore;
 import net.ptcrys.registrylibtest.RegistryLibTest;
+import net.ptcrys.registrylibtest.TestTextureColor;
 import net.ptcrys.registrylibtest.blockentity.SimpleBlockEntityExample;
 import net.ptcrys.registrylibtest.item.SimpleItemExample;
 
@@ -71,7 +71,7 @@ public class FullBlockExample {
             .defaultBlockstate()
             .texture(
                     () -> ImageUtil.generateIcon(
-                            ColorUtil.generateRandomMutedColor(), ImageUtil.CIRCLE, Color.CYAN))
+                            TestTextureColor.muted("standalone_timer"), ImageUtil.CIRCLE, Color.CYAN))
             .simpleItem()
             .addTag(BlockTags.MINEABLE_WITH_PICKAXE, BlockTags.NEEDS_IRON_TOOL)
             .register();
@@ -99,7 +99,7 @@ public class FullBlockExample {
                             }))
             .texture(
                     () -> ImageUtil.generateIcon(
-                            ColorUtil.generateRandomMutedColor(), ImageUtil.SQUARE, Color.GREEN))
+                            TestTextureColor.muted("timers/tier_1"), ImageUtil.SQUARE, Color.GREEN))
             .register();
 
     public static final BlockEntry<TimerBlock> TIMER_TIER_2 = TIMER_GROUP
@@ -115,7 +115,7 @@ public class FullBlockExample {
                             }))
             .texture(
                     () -> ImageUtil.generateIcon(
-                            ColorUtil.generateRandomMutedColor(), ImageUtil.SQUARE, Color.ORANGE))
+                            TestTextureColor.muted("timers/tier_2"), ImageUtil.SQUARE, Color.ORANGE))
             .register();
 
     public static final BlockEntry<TimerBlock> TIMER_TIER_3 = TIMER_GROUP
@@ -131,6 +131,6 @@ public class FullBlockExample {
                             }))
             .texture(
                     () -> ImageUtil.generateIcon(
-                            ColorUtil.generateRandomMutedColor(), ImageUtil.SQUARE, Color.RED))
+                            TestTextureColor.muted("timers/tier_3"), ImageUtil.SQUARE, Color.RED))
             .register();
 }

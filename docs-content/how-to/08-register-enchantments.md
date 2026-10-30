@@ -6,7 +6,7 @@ description: Quick reference for enchantment registration patterns.
 
 # Register Enchantments
 
-Enchantments in NeoForge 1.21+ are **data-driven**. RegistryLib provides an `.enchantment()` builder that generates the enchantment JSON, lang entries, and tag entries from code, with no hand-written JSON needed. The builder uses the Minecraft `Enchantment.Builder` API with typed `DataComponentType` references.
+Enchantments in NeoForge 26.1.2 are **data-driven**. RegistryLib provides an `.enchantment()` builder that generates the enchantment JSON, lang entries, and tag entries from code, with no hand-written JSON needed. The builder uses the Minecraft `Enchantment.Builder` API with typed `DataComponentType` references.
 
 ## Simple Enchantment (Vanilla Effects)
 
@@ -138,7 +138,7 @@ For vanilla effect components like `EnchantmentEffectComponents.BLOCK_EXPERIENCE
 | `effects` | Map of effect component type -> effect definition list |
 
 :::important
-Enchantments are data-driven in NeoForge 1.21+. The `.enchantment()` builder generates the JSON automatically during datagen; you do **not** need to write JSON files manually.
+Enchantments are data-driven in NeoForge 26.1.2. The `.enchantment()` builder generates the JSON automatically during datagen; you do **not** need to write JSON files manually.
 :::
 
 :::warning

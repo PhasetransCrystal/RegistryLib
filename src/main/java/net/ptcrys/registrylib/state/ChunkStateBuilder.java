@@ -53,6 +53,11 @@ public final class ChunkStateBuilder<T, P>
     }
 
     @Override
+    protected StateScope stateScope() {
+        return StateScope.CHUNK;
+    }
+
+    @Override
     protected AbstractStateEntry<T> createEntry(
                                                 Identifier identifier,
                                                 Codec<T> codec,

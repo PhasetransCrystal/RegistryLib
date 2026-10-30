@@ -10,12 +10,12 @@ This page walks you through dependency setup and local validation so you can sta
 
 ## Prerequisites
 
-- A working NeoForge mod project (Minecraft 1.21.x)
-- Gradle 8+ with a Java 21 toolchain
+- A working NeoForge mod project (Minecraft 26.1.2, NeoForge 26.1.2.71)
+- Gradle 9.6.1 with a Java 25 toolchain
 
 ## Step 1: Add the Maven Repository
 
-RegistryLib is published on the Gtodyssey Maven repository. No authentication is required to download.
+RegistryLib is published on the Ptcrys Maven repository. No authentication is required to download.
 
 Add the following to your `settings.gradle`:
 
@@ -23,8 +23,8 @@ Add the following to your `settings.gradle`:
 dependencyResolutionManagement {
         repositories {
                 maven {
-                        name = 'Gtodyssey'
-                        url = uri('https://maven.gtodyssey.com/releases')
+                        name = 'Ptcrys'
+                        url = uri('https://maven.ptcrys.net/releases')
                 }
         }
 }
@@ -35,7 +35,7 @@ Or, if you prefer to configure repositories in `build.gradle`:
 ```groovy
 repositories {
         maven {
-                url = 'https://maven.gtodyssey.com/releases'
+                url = 'https://maven.ptcrys.net/releases'
         }
 }
 ```
@@ -46,12 +46,12 @@ In your `build.gradle`:
 
 ```groovy
 dependencies {
-        implementation 'net.ptcrysb:1.0.0'
+        implementation 'net.ptcrys:registrylib:<version>'
 }
 ```
 
 :::note
-Replace the version with the target release you are using, and keep your Minecraft, mappings, and NeoForge versions aligned with that release.
+Replace `<version>` with a release from the [GitHub Releases](https://github.com/PhasetransCrystal/RegistryLib/releases) page, and keep your Minecraft, mappings, and NeoForge versions aligned with that release.
 :::
 
 ## Step 3: Verify the Local Tooling Path

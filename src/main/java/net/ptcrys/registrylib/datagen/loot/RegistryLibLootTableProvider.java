@@ -101,6 +101,7 @@ public class RegistryLibLootTableProvider extends LootTableProvider implements R
                             WritableRegistry<LootTable> writableregistry,
                             ValidationContextSource validationcontext,
                             ProblemReporter.Collector collector) {
+        super.validate(writableregistry, validationcontext, collector);
         currentLootCreators.forEach(c -> c.validate(writableregistry, validationcontext));
     }
 

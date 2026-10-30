@@ -576,7 +576,7 @@ ALTAR.addRecipe("cobblestone_to_stone",
 | `.build()` | Register and return parent (for chaining) |
 
 :::warning
-Calling `.register()` on the same `RecipeTypeBuilder` twice throws an `IllegalStateException`. Store the returned `RecipeTypeEntry` in a `static final` field and reuse it instead of re-registering.
+Set `.serializer(codec, streamCodec)` before calling `.register()`. If it is missing, registration throws `IllegalStateException` and that builder cannot be retried; create a new builder after correcting the configuration. Store a successfully returned `RecipeTypeEntry` in a `static final` field and reuse it instead of re-registering.
 :::
 
 ### RegistryCore.addRecipe
