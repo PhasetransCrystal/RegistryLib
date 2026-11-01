@@ -6,7 +6,6 @@ import net.ptcrys.registrylib.datagen.ProviderType;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.core.Registry;
 import net.minecraft.data.PackOutput;
-import net.minecraft.data.tags.IntrinsicHolderTagsProvider;
 import net.minecraft.data.tags.TagAppender;
 import net.minecraft.data.tags.TagsProvider;
 import net.minecraft.resources.ResourceKey;
@@ -15,7 +14,6 @@ import net.minecraft.tags.TagKey;
 import net.neoforged.fml.LogicalSide;
 
 import java.util.concurrent.CompletableFuture;
-import java.util.function.Function;
 
 public interface RegistryLibTagsProvider<T> extends RegistryLibLookupFillerProvider {
 
@@ -27,10 +25,10 @@ public interface RegistryLibTagsProvider<T> extends RegistryLibLookupFillerProvi
 
     interface Intrinsic<T> extends RegistryLibTagsProvider<T> {
 
-        TagAppender<T, T> tag(TagKey<T> key);
+        TagAppender<T> tag(TagKey<T> key);
     }
 
-    class IntrinsicImpl<T> extends IntrinsicHolderTagsProvider<T>
+    class IntrinsicImpl<T> extends TagsProvider<T>
                        implements RegistryLibTagsProvider.Intrinsic<T> {
 
         private final RegistryCore owner;
@@ -44,9 +42,8 @@ public interface RegistryLibTagsProvider<T> extends RegistryLibLookupFillerProvi
                              String name,
                              PackOutput packOutput,
                              ResourceKey<? extends Registry<T>> registryIn,
-                             CompletableFuture<HolderLookup.Provider> registriesLookup,
-                             Function<T, ResourceKey<T>> keyExtractor) {
-            super(packOutput, registryIn, registriesLookup, keyExtractor, owner.getModid());
+                             CompletableFuture<HolderLookup.Provider> registriesLookup) {
+            super(packOutput, registryIn, registriesLookup, owner.getModid());
 
             this.owner = owner;
             this.type = type;
@@ -74,7 +71,7 @@ public interface RegistryLibTagsProvider<T> extends RegistryLibLookupFillerProvi
         }
 
         @Override
-        public TagAppender<T, T> tag(TagKey<T> key) {
+        public TagAppender<T> tag(TagKey<T> key) {
             return super.tag(key);
         }
 

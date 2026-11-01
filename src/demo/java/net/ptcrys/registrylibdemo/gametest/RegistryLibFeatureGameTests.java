@@ -39,12 +39,13 @@ import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.levelgen.GenerationStep;
-import net.minecraft.world.level.levelgen.feature.ConfiguredFeature;
 import net.minecraft.world.level.levelgen.feature.Feature;
-import net.minecraft.world.level.levelgen.feature.configurations.SimpleBlockConfiguration;
-import net.minecraft.world.level.levelgen.feature.stateproviders.BlockStateProvider;
+import net.minecraft.world.level.levelgen.feature.SimpleBlockFeature;
+import net.minecraft.world.level.levelgen.feature.stateproviders.SimpleStateProvider;
+import net.minecraft.world.level.levelgen.placement.BiomeFilter;
+import net.minecraft.world.level.levelgen.placement.BlockPredicateFilter;
 import net.minecraft.world.level.levelgen.placement.CountPlacement;
-import net.minecraft.world.level.levelgen.placement.PlacementModifierType;
+import net.minecraft.world.level.levelgen.placement.HeightmapPlacement;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.neoforge.common.world.BiomeModifiers;
@@ -267,9 +268,10 @@ public final class RegistryLibFeatureGameTests {
         helper.assertTrue(first.getDataGenInitializer() != other.getDataGenInitializer(),
                 Component.literal("different namespaces retain separate pipelines"));
         DataProviderInitializerProbe initializer = new DataProviderInitializerProbe();
+        initializer.addDependency(ProviderType.ENCHANTMENT_TAGS, ProviderType.BLOCK_TAGS);
         boolean duplicateDependencyRejected = false;
         try {
-            initializer.addDependency(ProviderType.ENCHANTMENT_TAGS, ProviderType.BLOCK_TAGS);
+            initializer.addDependency(ProviderType.ENCHANTMENT_TAGS, ProviderType.FLUID_TAGS);
         } catch (IllegalStateException expected) {
             duplicateDependencyRejected = true;
         }
@@ -277,7 +279,7 @@ public final class RegistryLibFeatureGameTests {
                 .filter(sorted -> sorted.type() == ProviderType.ENCHANTMENT_TAGS)
                 .findFirst()
                 .orElseThrow();
-        helper.assertTrue(duplicateDependencyRejected && enchantmentTags.parent() == ProviderType.DATAPACK_REGISTRIES,
+        helper.assertTrue(duplicateDependencyRejected && enchantmentTags.parent() == ProviderType.BLOCK_TAGS,
                 Component.literal("rejected prerequisite leaves the original dependency unchanged"));
 
         DatagenProbe stateCore = new DatagenProbe("state_conflict_" + UUID.randomUUID().toString().replace("-", ""));
@@ -522,9 +524,8 @@ public final class RegistryLibFeatureGameTests {
 
     private static void worldgenRegistrationContract(GameTestHelper helper) {
         String name = "worldgen_contract_" + UUID.randomUUID().toString().replace("-", "");
-        Supplier<ConfiguredFeature<SimpleBlockConfiguration, ?>> feature = () -> new ConfiguredFeature<>(
-                Feature.SIMPLE_BLOCK,
-                new SimpleBlockConfiguration(BlockStateProvider.simple(Blocks.STONE)));
+        Supplier<Feature> feature = () -> new SimpleBlockFeature(
+                new SimpleStateProvider(Blocks.STONE.defaultBlockState()));
 
         RegistryLibDemo.REGISTRYLIB.worldgenFeature(name, feature)
                 .placement(CountPlacement.of(1))
@@ -584,7 +585,7 @@ public final class RegistryLibFeatureGameTests {
                 Component.literal("crop growth reads high ambient essence"));
 
         crop.performBonemeal(
-                level, RandomSource.create(9L), absoluteCropPos, helper.getBlockState(cropPos));
+                level, RandomSource.create(9L), absoluteCropPos, helper.getBlockState(cropPos), net.minecraft.world.level.block.BonemealSource.INTERACTION);
         helper.assertTrue(
                 crop.getAge(helper.getBlockState(cropPos)) <= 7,
                 Component.literal("bonemeal does not exceed max age"));
@@ -630,8 +631,8 @@ public final class RegistryLibFeatureGameTests {
         ServerLevel level = helper.getLevel();
         var configured = level
                 .registryAccess()
-                .lookupOrThrow(Registries.CONFIGURED_FEATURE)
-                .get(SimpleWorldgenExample.ESSENCE_NODE_PATCH.configuredKey());
+                .lookupOrThrow(Registries.FEATURE)
+                .get(SimpleWorldgenExample.ESSENCE_NODE_PATCH.featureKey());
         var placed = level
                 .registryAccess()
                 .lookupOrThrow(Registries.PLACED_FEATURE)
@@ -652,11 +653,11 @@ public final class RegistryLibFeatureGameTests {
                 Component.literal("biome modifier step"));
         helper.assertTrue(
                 placed.orElseThrow().value().placement().stream()
-                        .anyMatch(modifierEntry -> modifierEntry.type() == PlacementModifierType.HEIGHTMAP),
+                        .anyMatch(modifierEntry -> modifierEntry instanceof HeightmapPlacement),
                 Component.literal("placed feature uses heightmap placement"));
         helper.assertTrue(
                 placed.orElseThrow().value().placement().stream()
-                        .anyMatch(modifierEntry -> modifierEntry.type() == PlacementModifierType.BIOME_FILTER),
+                        .anyMatch(modifierEntry -> modifierEntry instanceof BiomeFilter),
                 Component.literal("placed feature uses biome filter"));
 
         BlockPos origin = new BlockPos(2, 2, 2);
@@ -691,7 +692,7 @@ public final class RegistryLibFeatureGameTests {
         net.minecraft.world.level.levelgen.placement.PlacedFeature feature = new net.minecraft.world.level.levelgen.placement.PlacedFeature(
                 placed.value().feature(),
                 placed.value().placement().stream()
-                        .filter(modifier -> modifier.type() == PlacementModifierType.BLOCK_PREDICATE_FILTER)
+                        .filter(modifier -> modifier instanceof BlockPredicateFilter)
                         .toList());
         for (long seed = 0; seed < 64; seed++) {
             if (feature.place(

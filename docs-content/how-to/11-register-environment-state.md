@@ -99,16 +99,14 @@ The command shape selects the scope: `get <id>` reads world state, while `get <i
 
 ## Worldgen Feature
 
-Use `worldgenFeature(...)` to generate configured feature, placed feature, and optional biome modifier data.
+Use `worldgenFeature(...)` to generate feature, placed feature, and optional biome modifier data.
 
 ```java
 public static final WorldgenFeatureEntry ESSENCE_NODE_PATCH = REGISTRYLIB
         .worldgenFeature(
                 "essence_node_patch",
-                () -> new ConfiguredFeature<>(
-                        Feature.SIMPLE_BLOCK,
-                        new SimpleBlockConfiguration(
-                                BlockStateProvider.simple(ESSENCE_NODE.get()))))
+                () -> new SimpleBlockFeature(
+                        new SimpleStateProvider(ESSENCE_NODE.get().defaultBlockState())))
         .placement(CountPlacement.of(1))
         .placement(InSquarePlacement.spread())
         .placement(HeightmapPlacement.onHeightmap(Heightmap.Types.WORLD_SURFACE_WG))
@@ -117,10 +115,10 @@ public static final WorldgenFeatureEntry ESSENCE_NODE_PATCH = REGISTRYLIB
         .register();
 ```
 
-The returned `WorldgenFeatureEntry` contains the configured and placed feature keys:
+The returned `WorldgenFeatureEntry` contains the feature and placed feature keys:
 
 ```java
-ResourceKey<ConfiguredFeature<?, ?>> configured = ESSENCE_NODE_PATCH.configuredKey();
+ResourceKey<Feature> configured = ESSENCE_NODE_PATCH.featureKey();
 ResourceKey<PlacedFeature> placed = ESSENCE_NODE_PATCH.placedKey();
 ```
 

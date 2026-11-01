@@ -6,13 +6,13 @@ import net.ptcrys.registrylib.util.entry.BlockEntry;
 import net.ptcrys.registrylibdemo.RegistryLibDemo;
 import net.ptcrys.registrylibdemo.state.SimpleStateExample;
 
-import net.minecraft.advancements.criterion.StatePropertiesPredicate;
+import net.minecraft.advancements.predicates.StatePropertiesPredicate;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.block.CropBlock;
 import net.minecraft.world.level.block.SoundType;
 import net.minecraft.world.level.block.state.BlockBehaviour;
 import net.minecraft.world.level.material.MapColor;
-import net.minecraft.world.level.storage.loot.predicates.LootItemBlockStatePropertyCondition;
+import net.minecraft.world.level.storage.loot.predicates.MatchBlock;
 
 public final class SimpleCropExample {
 
@@ -64,10 +64,11 @@ public final class SimpleCropExample {
                                     block,
                                     Items.POTATO,
                                     Items.POTATO,
-                                    LootItemBlockStatePropertyCondition.hasBlockStateProperties(block)
-                                            .setProperties(
-                                                    StatePropertiesPredicate.Builder.properties()
-                                                            .hasProperty(CropBlock.AGE, block.getMaxAge())))))
+                                    MatchBlock.blockMatches(
+                                            tables.blockLookup(),
+                                            block,
+                                            StatePropertiesPredicate.Builder.properties()
+                                                    .hasProperty(CropBlock.AGE, block.getMaxAge())))))
             .stageTextures(
                     TextureRef.mc("block/potatoes_stage0"),
                     TextureRef.mc("block/potatoes_stage1"),

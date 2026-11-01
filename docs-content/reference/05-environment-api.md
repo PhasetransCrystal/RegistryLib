@@ -111,7 +111,7 @@ The environment API is for attachment-backed state and datapack-backed worldgen.
 
 | Method | Return type | Description |
 | --- | --- | --- |
-| `configuredKey()` | `ResourceKey<ConfiguredFeature<?, ?>>` | Key for the generated configured feature |
+| `featureKey()` | `ResourceKey<Feature>` | Key for the generated feature |
 | `placedKey()` | `ResourceKey<PlacedFeature>` | Key for the generated placed feature |
 
 ## See Also

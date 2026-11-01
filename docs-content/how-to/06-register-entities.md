@@ -342,11 +342,11 @@ private static void onRegisterLayerDefinitions(
 ```java
 .loot((tables, entityType) -> tables.add(entityType, LootTable.lootTable()
         .withPool(LootPool.lootPool()
-                .setRolls(ConstantValue.exactly(1))
+                .setRolls(ContextIntProviders.exactly(1))
                 .add(LootItem.lootTableItem(Items.DIAMOND))
                 .when(LootItemKilledByPlayerCondition.killedByPlayer()))
         .withPool(LootPool.lootPool()
-                .setRolls(ConstantValue.exactly(1))
+                .setRolls(ContextIntProviders.exactly(1))
                 .add(LootItem.lootTableItem(Items.AMETHYST_SHARD)))))
 ```
 
@@ -358,7 +358,7 @@ private static void onRegisterLayerDefinitions(
 | `entityType` | `EntityType<T>` | 当前注册的实体类型 |
 | `LootTable.lootTable()` | builder | 创建战利品表 |
 | `LootPool.lootPool()` | builder | 创建一个奖池（可叠加多个） |
-| `setRolls()` | `NumberProvider` | 掷骰次数：`ConstantValue.exactly(n)` 或 `UniformGenerator.between(min, max)` |
+| `setRolls()` | `Holder<ContextIntProvider>` | 掷骰次数：`ContextIntProviders.exactly(n)` 或 `ContextIntProviders.between(min, max)` |
 | `add()` entry | `LootItem.lootTableItem(item)` | 添加战利品条目 |
 | `when()` condition | `LootItemKilledByPlayerCondition` | 条件触发（此处：仅玩家击杀） |
 
@@ -475,7 +475,7 @@ public static final EntityEntry<MyMob> MY_MOB = REGISTRYLIB
         .addTag(EntityTypeTags.FALL_DAMAGE_IMMUNE)
         .loot((tables, entityType) -> tables.add(entityType, LootTable.lootTable()
                 .withPool(LootPool.lootPool()
-                        .setRolls(ConstantValue.exactly(1))
+                        .setRolls(ContextIntProviders.exactly(1))
                         .add(LootItem.lootTableItem(Items.DIAMOND))
                         .when(LootItemKilledByPlayerCondition.killedByPlayer()))))
         .spawnPlacement(SpawnPlacementTypes.ON_GROUND,

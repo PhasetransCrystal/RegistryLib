@@ -76,7 +76,7 @@ Jump into **intermediate tutorials** for real-world patterns:
 | | |
 |---|---|
 | **Version** | See [GitHub Releases](https://github.com/PhasetransCrystal/RegistryLib/releases) and the [README](https://github.com/PhasetransCrystal/RegistryLib#readme) |
-| **Minecraft** | 26.1.2 (NeoForge 26.1.2.125) |
+| **Minecraft** | 26.3 (NeoForge 26.3.0.101) |
 | **Java** | 25 |
 | **Source** | [RegistryLib](https://github.com/PhasetransCrystal/RegistryLib) |
 | **Organization** | [PhasetransCrystal](https://github.com/PhasetransCrystal) |

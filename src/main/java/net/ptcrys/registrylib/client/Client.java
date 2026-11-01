@@ -43,7 +43,6 @@ import net.neoforged.neoforge.fluids.FluidType;
 import com.mojang.blaze3d.platform.InputConstants;
 import com.mojang.datafixers.util.Either;
 import lombok.experimental.UtilityClass;
-import org.lwjgl.glfw.GLFW;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -87,15 +86,15 @@ public class Client {
     private final KeyMapping TOOLTIP_PAGE_UP = new KeyMapping(
             "key.registrylib.tooltip_page_up",
             KeyConflictContext.GUI,
-            InputConstants.Type.KEYSYM,
-            GLFW.GLFW_KEY_UP,
+            InputConstants.Type.KEYBOARD,
+            InputConstants.KEY_UP,
             TOOLTIP_KEY_CATEGORY);
 
     private final KeyMapping TOOLTIP_PAGE_DOWN = new KeyMapping(
             "key.registrylib.tooltip_page_down",
             KeyConflictContext.GUI,
-            InputConstants.Type.KEYSYM,
-            GLFW.GLFW_KEY_DOWN,
+            InputConstants.Type.KEYBOARD,
+            InputConstants.KEY_DOWN,
             TOOLTIP_KEY_CATEGORY);
 
     /** 默认 lineHeight 估算（gather 阶段没有 event font，用它作为分页高度估算的兜底）。 */
@@ -389,7 +388,7 @@ public class Client {
     }
 
     private void onTooltipKeyPressed(ScreenEvent.KeyPressed.Pre event) {
-        var key = event.getKeyCode() == -1 ? InputConstants.Type.SCANCODE.getOrCreate(event.getScanCode()) : InputConstants.Type.KEYSYM.getOrCreate(event.getKeyCode());
+        var key = InputConstants.Type.KEYBOARD.getOrCreate(event.getKey());
         if (TOOLTIP_PAGE_UP.isActiveAndMatches(key)) {
             if (TooltipPagination.pageUp()) {
                 event.setCanceled(true);

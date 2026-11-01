@@ -4,6 +4,8 @@ import net.ptcrys.registrylib.datagen.provider.RegistryLibLookupFillerProvider;
 
 import net.minecraft.core.Registry;
 import net.minecraft.core.RegistrySetBuilder;
+import net.minecraft.core.registries.MultiRegistryBootstrap;
+import net.minecraft.core.registries.SingleRegistryBootstrap;
 import net.minecraft.resources.ResourceKey;
 
 import it.unimi.dsi.fastutil.objects.ReferenceOpenHashSet;
@@ -20,20 +22,34 @@ public class DataProviderInitializer {
     private final Map<ProviderType<?>, ProviderType<? extends RegistryLibLookupFillerProvider>> providerDependencies = new ConcurrentHashMap<>();
 
     @SuppressWarnings("rawtypes")
-    private final Map<ResourceKey<? extends Registry<?>>, List<RegistrySetBuilder.RegistryBootstrap>> pendingBootstraps = new ConcurrentHashMap<>();
+    private final Map<ResourceKey<? extends Registry<?>>, List<SingleRegistryBootstrap>> pendingBootstraps = new ConcurrentHashMap<>();
+    private final List<MultiRegistryBootstrap> pendingMultiBootstraps = Collections.synchronizedList(new ArrayList<>());
 
     private final Set<ResourceKey<?>> reservedKeys = ConcurrentHashMap.newKeySet();
 
     public DataProviderInitializer() {
         addDependency(ProviderType.ITEM_TAGS, ProviderType.BLOCK_TAGS);
-        addDependency(ProviderType.ENCHANTMENT_TAGS, ProviderType.DATAPACK_REGISTRIES);
+    }
+
+    @SuppressWarnings({ "unchecked", "rawtypes" })
+    public void applyTo(net.neoforged.neoforge.data.event.DatapackRegistryGatherer gatherer) {
+        for (var entry : pendingBootstraps.entrySet()) {
+            for (SingleRegistryBootstrap bootstrap : entry.getValue()) {
+                gatherer.add((ResourceKey) entry.getKey(), bootstrap);
+            }
+        }
+        pendingBootstraps.clear();
+        for (MultiRegistryBootstrap bootstrap : pendingMultiBootstraps) {
+            gatherer.add(bootstrap);
+        }
+        pendingMultiBootstraps.clear();
     }
 
     @SuppressWarnings({ "unchecked", "rawtypes" })
     public RegistrySetBuilder getDatapackRegistryProviders() {
         for (var entry : pendingBootstraps.entrySet()) {
             ResourceKey registryKey = entry.getKey();
-            List<RegistrySetBuilder.RegistryBootstrap> bootstraps = entry.getValue();
+            List<SingleRegistryBootstrap> bootstraps = entry.getValue();
             datapackEntryProvider.add(
                     registryKey,
                     ctx -> {
@@ -43,6 +59,10 @@ public class DataProviderInitializer {
                     });
         }
         pendingBootstraps.clear();
+        for (MultiRegistryBootstrap bootstrap : pendingMultiBootstraps) {
+            datapackEntryProvider.add(bootstrap);
+        }
+        pendingMultiBootstraps.clear();
         return datapackEntryProvider;
     }
 
@@ -75,11 +95,15 @@ public class DataProviderInitializer {
 
     @SuppressWarnings({ "unchecked", "rawtypes" })
     public <T> void add(
-                        ResourceKey<Registry<T>> registry, RegistrySetBuilder.RegistryBootstrap<T> provider) {
+                        ResourceKey<Registry<T>> registry, SingleRegistryBootstrap<T> provider) {
         pendingBootstraps
                 .computeIfAbsent(
                         (ResourceKey) registry, k -> Collections.synchronizedList(new ArrayList<>()))
-                .add((RegistrySetBuilder.RegistryBootstrap) provider);
+                .add((SingleRegistryBootstrap) provider);
+    }
+
+    public void add(MultiRegistryBootstrap provider) {
+        pendingMultiBootstraps.add(provider);
     }
 
     public void addDependency(

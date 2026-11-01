@@ -90,7 +90,7 @@ public class FullRecipeExample {
         INFUSER.addRecipe(
                 "infuser_planks_or_logs_to_stick",
                 registries -> {
-                    var items = registries.lookupOrThrow(Registries.ITEM);
+                    var items = registries.lookup(Registries.ITEM);
                     return new InfuserRecipe(
                             CompoundIngredient.of(
                                     Ingredient.of(items.getOrThrow(ItemTags.PLANKS)),
@@ -108,8 +108,8 @@ public class FullRecipeExample {
                 registries -> new InfuserRecipe(
                         DifferenceIngredient.of(
                                 Ingredient.of(
-                                        registries.lookupOrThrow(Registries.ITEM).getOrThrow(ItemTags.WOOL)),
-                                Ingredient.of(Items.WHITE_WOOL)),
+                                        registries.lookup(Registries.ITEM).getOrThrow(ItemTags.WOOL)),
+                                Ingredient.of(Items.WOOL.white())),
                         new ItemStackTemplate(Items.STRING, 2),
                         40,
                         8.0F,

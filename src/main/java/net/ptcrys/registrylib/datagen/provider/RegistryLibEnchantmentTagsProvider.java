@@ -45,7 +45,7 @@ public class RegistryLibEnchantmentTagsProvider extends EnchantmentTagsProvider
         owner.genData(type, this);
     }
 
-    public TagAppender<ResourceKey<Enchantment>, Enchantment> tag(TagKey<Enchantment> key) {
+    public TagAppender<Enchantment> tag(TagKey<Enchantment> key) {
         return super.tag(key);
     }
 

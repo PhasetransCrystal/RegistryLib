@@ -2,9 +2,11 @@ package net.ptcrys.registrylib.datagen.loot;
 
 import net.ptcrys.registrylib.RegistryCore;
 
-import net.minecraft.core.HolderLookup;
+import net.minecraft.core.Holder;
+import net.minecraft.core.HolderGetter;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.data.loot.BlockLootSubProvider;
+import net.minecraft.data.loot.LootTableSubProvider;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.flag.FeatureFlags;
 import net.minecraft.world.item.Item;
@@ -15,7 +17,7 @@ import net.minecraft.world.level.storage.loot.entries.LootPoolEntryContainer;
 import net.minecraft.world.level.storage.loot.functions.FunctionUserBuilder;
 import net.minecraft.world.level.storage.loot.predicates.ConditionUserBuilder;
 import net.minecraft.world.level.storage.loot.predicates.LootItemCondition;
-import net.minecraft.world.level.storage.loot.providers.number.NumberProvider;
+import net.minecraft.world.level.storage.loot.providers.number.ints.ContextIntProvider;
 
 import org.jspecify.annotations.NonNull;
 
@@ -29,20 +31,13 @@ public class RegistryLibBlockLootTables extends BlockLootSubProvider
     private final RegistryCore parent;
     private final Consumer<RegistryLibBlockLootTables> callback;
 
-    private final HolderLookup<Item> itemLookup;
-    private final HolderLookup<Block> blockLookup;
-    private final HolderLookup<EntityType<?>> entityLookup;
-
     public RegistryLibBlockLootTables(
-                                      HolderLookup.Provider provider,
+                                      LootTableSubProvider.Context output,
                                       RegistryCore parent,
                                       Consumer<RegistryLibBlockLootTables> callback) {
-        super(Set.of(), FeatureFlags.REGISTRY.allFlags(), provider);
+        super(Set.of(), FeatureFlags.REGISTRY.allFlags(), output);
         this.parent = parent;
         this.callback = callback;
-        itemLookup = registries.lookupOrThrow(Registries.ITEM);
-        blockLookup = registries.lookupOrThrow(Registries.BLOCK);
-        entityLookup = registries.lookupOrThrow(Registries.ENTITY_TYPE);
     }
 
     @Override
@@ -55,20 +50,16 @@ public class RegistryLibBlockLootTables extends BlockLootSubProvider
         return parent.getAll(Registries.BLOCK).stream().map(Supplier::get).toList();
     }
 
-    public HolderLookup.Provider getRegistries() {
-        return this.registries;
+    public HolderGetter<Item> itemLookup() {
+        return items;
     }
 
-    public HolderLookup<Item> itemLookup() {
-        return itemLookup;
+    public HolderGetter<Block> blockLookup() {
+        return blocks;
     }
 
-    public HolderLookup<Block> blockLookup() {
-        return blockLookup;
-    }
-
-    public HolderLookup<EntityType<?>> entityLookup() {
-        return entityLookup;
+    public HolderGetter<EntityType<?>> entityLookup() {
+        return output.lookup(Registries.ENTITY_TYPE);
     }
 
     // Expose protected methods from BlockLootSubProvider
@@ -109,13 +100,13 @@ public class RegistryLibBlockLootTables extends BlockLootSubProvider
     }
 
     @Override
-    public LootTable.Builder createSingleItemTable(ItemLike item, NumberProvider count) {
+    public LootTable.Builder createSingleItemTable(ItemLike item, Holder<ContextIntProvider> count) {
         return super.createSingleItemTable(item, count);
     }
 
     @Override
     public LootTable.Builder createSingleItemTableWithSilkTouch(
-                                                                Block block, ItemLike item, NumberProvider count) {
+                                                                Block block, ItemLike item, Holder<ContextIntProvider> count) {
         return super.createSingleItemTableWithSilkTouch(block, item, count);
     }
 

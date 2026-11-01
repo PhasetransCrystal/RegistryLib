@@ -47,7 +47,7 @@ import net.minecraft.world.level.storage.loot.LootPool;
 import net.minecraft.world.level.storage.loot.LootTable;
 import net.minecraft.world.level.storage.loot.entries.LootItem;
 import net.minecraft.world.level.storage.loot.predicates.LootItemKilledByPlayerCondition;
-import net.minecraft.world.level.storage.loot.providers.number.ConstantValue;
+import net.minecraft.world.level.storage.loot.providers.number.ints.ContextIntProviders;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 
@@ -117,12 +117,12 @@ public class FullEntityExample {
                             LootTable.lootTable()
                                     .withPool(
                                             LootPool.lootPool()
-                                                    .setRolls(ConstantValue.exactly(1))
+                                                    .setRolls(ContextIntProviders.exactly(1))
                                                     .add(LootItem.lootTableItem(Items.OBSIDIAN))
                                                     .when(LootItemKilledByPlayerCondition.killedByPlayer()))
                                     .withPool(
                                             LootPool.lootPool()
-                                                    .setRolls(ConstantValue.exactly(1))
+                                                    .setRolls(ContextIntProviders.exactly(1))
                                                     .add(LootItem.lootTableItem(Items.IRON_INGOT)))))
             // --- spawnPlacement: 刷新放置规则（生成条件）---
             .spawnPlacement(

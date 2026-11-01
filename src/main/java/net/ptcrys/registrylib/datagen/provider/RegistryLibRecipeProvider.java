@@ -1,14 +1,14 @@
 package net.ptcrys.registrylib.datagen.provider;
 
+import net.ptcrys.registrylib.RegistryCore;
 import net.ptcrys.registrylib.datagen.ProviderType;
 import net.ptcrys.registrylib.util.DataIngredient;
 
 import net.minecraft.advancements.Advancement;
 import net.minecraft.advancements.AdvancementHolder;
-import net.minecraft.advancements.Criterion;
-import net.minecraft.advancements.criterion.InventoryChangeTrigger;
-import net.minecraft.advancements.criterion.ItemPredicate;
-import net.minecraft.core.HolderLookup;
+import net.minecraft.advancements.predicates.ItemPredicate;
+import net.minecraft.advancements.triggers.Criterion;
+import net.minecraft.advancements.triggers.InventoryChangeTrigger;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.data.recipes.RecipeCategory;
@@ -17,6 +17,7 @@ import net.minecraft.data.recipes.RecipeProvider;
 import net.minecraft.data.recipes.ShapedRecipeBuilder;
 import net.minecraft.data.recipes.ShapelessRecipeBuilder;
 import net.minecraft.data.recipes.SimpleCookingRecipeBuilder;
+import net.minecraft.data.worldgen.BootstrapContext;
 import net.minecraft.resources.Identifier;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.tags.TagKey;
@@ -37,21 +38,19 @@ import javax.annotation.Nullable;
 
 public class RegistryLibRecipeProvider extends RecipeProvider implements RecipeOutput {
 
-    private final RegistryLibRecipeRunner runner;
-    private final RecipeOutput outputDelegated;
+    private final RegistryCore owner;
 
     public RegistryLibRecipeProvider(
-                                     RegistryLibRecipeRunner runner, HolderLookup.Provider registries, RecipeOutput output) {
-        super(registries, output);
-        this.runner = runner;
-        this.outputDelegated = output;
+                                     RegistryCore owner,
+                                     BootstrapContext<Recipe<?>> recipeOutput,
+                                     BootstrapContext<Advancement> advancementOutput) {
+        super(recipeOutput, advancementOutput, owner.getModid());
+        this.owner = owner;
     }
 
     @Override
     public void buildRecipes() {
-        runner.provider = this;
-        runner.owner.genData(ProviderType.RECIPE, this);
-        runner.provider = null;
+        owner.genData(ProviderType.RECIPE, this);
     }
 
     // Delegate RecipeOutput methods
@@ -61,25 +60,29 @@ public class RegistryLibRecipeProvider extends RecipeProvider implements RecipeO
                        Recipe<?> recipe,
                        @Nullable AdvancementHolder advancement,
                        ICondition... conditions) {
-        outputDelegated.accept(key, recipe, advancement, conditions);
+        output.accept(key, recipe, advancement, conditions);
     }
 
     @Override
     public Advancement.Builder advancement() {
-        return outputDelegated.advancement();
+        return output.advancement();
     }
 
     @Override
-    public void includeRootAdvancement() {
-        outputDelegated.includeRootAdvancement();
+    public <S> net.minecraft.core.HolderGetter<S> lookup(
+                                                         ResourceKey<? extends net.minecraft.core.Registry<? extends S>> key) {
+        return output.lookup(key);
     }
 
-    public HolderLookup.Provider registries() {
-        return registries;
+    @Override
+    @Deprecated
+    public <S> java.util.stream.Stream<net.minecraft.core.Holder.Reference<S>> listContextElements(
+                                                                                                   ResourceKey<? extends net.minecraft.core.Registry<? extends S>> key) {
+        return output.listContextElements(key);
     }
 
     public Identifier safeId(Identifier id) {
-        return Identifier.fromNamespaceAndPath(runner.owner.getModid(), safeName(id));
+        return Identifier.fromNamespaceAndPath(owner.getModid(), safeName(id));
     }
 
     public Identifier safeId(DataIngredient source) {
@@ -92,7 +95,7 @@ public class RegistryLibRecipeProvider extends RecipeProvider implements RecipeO
 
     public ResourceKey<Recipe<?>> safeKey(Identifier id) {
         return ResourceKey.create(
-                Registries.RECIPE, Identifier.fromNamespaceAndPath(runner.owner.getModid(), safeName(id)));
+                Registries.RECIPE, Identifier.fromNamespaceAndPath(owner.getModid(), safeName(id)));
     }
 
     public ResourceKey<Recipe<?>> safeKey(DataIngredient source) {

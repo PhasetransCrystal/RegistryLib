@@ -7,7 +7,7 @@ import net.ptcrys.registrylibdemo.item.SimpleItemExample;
 import net.minecraft.advancements.Advancement;
 import net.minecraft.advancements.AdvancementHolder;
 import net.minecraft.advancements.AdvancementType;
-import net.minecraft.advancements.criterion.InventoryChangeTrigger;
+import net.minecraft.advancements.triggers.InventoryChangeTrigger;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.Items;
 
@@ -22,7 +22,7 @@ public class SimpleAdvancementExample {
 
                     // 根成就：持有合成台
                     AdvancementHolder root = Advancement.Builder.advancement()
-                            .display(
+                            .rootDisplay(
                                     Items.CRAFTING_TABLE,
                                     adv.title(cat, "simple/root", "Getting Started"),
                                     adv.desc(cat, "simple/root", "Obtain a crafting table"),
@@ -35,7 +35,7 @@ public class SimpleAdvancementExample {
                             .addCriterion(
                                     "has_crafting_table",
                                     InventoryChangeTrigger.TriggerInstance.hasItems(Items.CRAFTING_TABLE))
-                            .save(adv, Identifier.fromNamespaceAndPath(cat, "simple/root"));
+                            .save(adv.output(), Identifier.fromNamespaceAndPath(cat, "simple/root"));
 
                     // 子成就：获得铜币
                     Advancement.Builder.advancement()
@@ -44,7 +44,6 @@ public class SimpleAdvancementExample {
                                     SimpleItemExample.COPPER_COIN.get(),
                                     adv.title(cat, "simple/get_coin", "First Coin"),
                                     adv.desc(cat, "simple/get_coin", "Pick up a Copper Coin"),
-                                    null,
                                     AdvancementType.TASK,
                                     true,
                                     true,
@@ -53,7 +52,7 @@ public class SimpleAdvancementExample {
                                     "has_coin",
                                     InventoryChangeTrigger.TriggerInstance.hasItems(
                                             SimpleItemExample.COPPER_COIN.get()))
-                            .save(adv, Identifier.fromNamespaceAndPath(cat, "simple/get_coin"));
+                            .save(adv.output(), Identifier.fromNamespaceAndPath(cat, "simple/get_coin"));
                 });
     }
 }

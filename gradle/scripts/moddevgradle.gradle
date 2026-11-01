@@ -61,17 +61,6 @@ neoForge {
             programArguments.addAll('--existing', file('src/main/resources/').getAbsolutePath())
             programArguments.addAll('--existing', file('src/demo/resources/').getAbsolutePath())
         }
-        serverData {
-            serverData()
-            ideName = "serverData"
-            gameDirectory.set(file('run/serverData'))
-            programArguments.addAll('--mod', project.mod_id, '--mod', 'registrylibdemo')
-            programArguments.addAll('--all')
-            programArguments.addAll('--output', file('src/generated/serverResources/').getAbsolutePath())
-            programArguments.addAll('--existing', file('src/main/resources/').getAbsolutePath())
-            programArguments.addAll('--existing', file('src/demo/resources/').getAbsolutePath())
-        }
-
         gameTestServer {
             type = "gameTestServer"
             gameDirectory.set(file('run/gameTestServer'))
@@ -80,7 +69,7 @@ neoForge {
 
         configureEach {
             loadedMods = [project.neoForge.mods.getByName(project.mod_id)]
-            if (name in ['client', 'server', 'gameTestServer', 'clientData', 'serverData']) {
+            if (name in ['client', 'server', 'gameTestServer', 'clientData']) {
                 loadedMods.add(project.neoForge.mods.getByName('registrylibdemo'))
             }
             systemProperty 'forge.logging.markers', 'REGISTRIES'

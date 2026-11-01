@@ -1,8 +1,8 @@
 package net.ptcrys.registrylib.worldgen;
 
 import net.minecraft.resources.ResourceKey;
-import net.minecraft.world.level.levelgen.feature.ConfiguredFeature;
+import net.minecraft.world.level.levelgen.feature.Feature;
 import net.minecraft.world.level.levelgen.placement.PlacedFeature;
 
 public record WorldgenFeatureEntry(
-                                   ResourceKey<ConfiguredFeature<?, ?>> configuredKey, ResourceKey<PlacedFeature> placedKey) {}
+                                   ResourceKey<Feature> featureKey, ResourceKey<PlacedFeature> placedKey) {}

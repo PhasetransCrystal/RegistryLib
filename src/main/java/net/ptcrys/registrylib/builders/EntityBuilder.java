@@ -19,6 +19,7 @@ import net.minecraft.resources.Identifier;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.tags.TagKey;
 import net.minecraft.util.random.Weighted;
+import net.minecraft.util.valueproviders.UniformInt;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.MobCategory;
@@ -208,7 +209,8 @@ public class EntityBuilder<T extends Entity, P>
                         ctx -> {
                             var biomes = ctx.lookup(Registries.BIOME).getOrThrow(capturedTag);
                             var spawner = new Weighted<>(
-                                    new SpawnerData(getValue(), capturedMin, capturedMax), capturedWeight);
+                                    new SpawnerData(getValue(), UniformInt.of(capturedMin, capturedMax)),
+                                    capturedWeight);
                             var modifier = AddSpawnsBiomeModifier.singleSpawn(biomes, spawner);
                             ctx.register(key, modifier);
                         });

@@ -69,7 +69,7 @@ public class SimpleRecipeExample {
         ALTAR.addRecipe(
                 "altar_logs_to_charcoal",
                 registries -> new AltarRecipe(
-                        Ingredient.of(registries.lookupOrThrow(Registries.ITEM).getOrThrow(ItemTags.LOGS)),
+                        Ingredient.of(registries.lookup(Registries.ITEM).getOrThrow(ItemTags.LOGS)),
                         new ItemStackTemplate(Items.CHARCOAL),
                         60));
     }

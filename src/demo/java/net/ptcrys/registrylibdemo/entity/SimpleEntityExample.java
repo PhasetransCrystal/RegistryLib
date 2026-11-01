@@ -20,8 +20,7 @@ import net.minecraft.world.level.storage.loot.LootPool;
 import net.minecraft.world.level.storage.loot.LootTable;
 import net.minecraft.world.level.storage.loot.entries.LootItem;
 import net.minecraft.world.level.storage.loot.predicates.LootItemKilledByPlayerCondition;
-import net.minecraft.world.level.storage.loot.providers.number.ConstantValue;
-import net.minecraft.world.level.storage.loot.providers.number.UniformGenerator;
+import net.minecraft.world.level.storage.loot.providers.number.ints.ContextIntProviders;
 
 import java.awt.Color;
 import java.util.Optional;
@@ -107,12 +106,12 @@ public class SimpleEntityExample {
                             LootTable.lootTable()
                                     .withPool(
                                             LootPool.lootPool()
-                                                    .setRolls(ConstantValue.exactly(1.0F))
+                                                    .setRolls(ContextIntProviders.exactly(1))
                                                     .add(LootItem.lootTableItem(Items.DIAMOND).setWeight(1))
                                                     .when(LootItemKilledByPlayerCondition.killedByPlayer()))
                                     .withPool(
                                             LootPool.lootPool()
-                                                    .setRolls(UniformGenerator.between(0.0F, 1.0F))
+                                                    .setRolls(ContextIntProviders.between(0, 1))
                                                     .add(LootItem.lootTableItem(Items.AMETHYST_SHARD)))))
             // --- spawnPlacement: 怪物类自然生成规则（地面生成 + 标准怪物亮度检查）---
             .spawnPlacement(

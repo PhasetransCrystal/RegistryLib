@@ -5,50 +5,37 @@ import net.ptcrys.registrylib.datagen.ProviderType;
 
 import net.minecraft.advancements.Advancement;
 import net.minecraft.advancements.AdvancementHolder;
-import net.minecraft.core.HolderLookup;
-import net.minecraft.data.CachedOutput;
-import net.minecraft.data.DataProvider;
-import net.minecraft.data.PackOutput;
+import net.minecraft.core.registries.Registries;
+import net.minecraft.data.advancements.AdvancementSubProvider;
+import net.minecraft.data.worldgen.BootstrapContext;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.resources.Identifier;
-import net.neoforged.fml.LogicalSide;
+import net.minecraft.resources.ResourceKey;
 import net.neoforged.neoforge.common.conditions.ICondition;
-import net.neoforged.neoforge.common.conditions.WithConditions;
 
-import com.google.common.collect.Lists;
-
-import java.nio.file.Path;
-import java.util.*;
-import java.util.concurrent.CompletableFuture;
+import java.util.List;
+import java.util.Objects;
 import java.util.function.Consumer;
 
 import javax.annotation.Nullable;
 
-public class RegistryLibAdvancementProvider
-                                            implements RegistryLibProvider, Consumer<AdvancementHolder> {
+public class RegistryLibAdvancementProvider extends AdvancementSubProvider
+                                            implements Consumer<AdvancementHolder> {
 
     private final RegistryCore owner;
-    private final PackOutput packOutput;
-    private final CompletableFuture<HolderLookup.Provider> registriesLookup;
-    private final List<CompletableFuture<?>> advancementsToSave = Lists.newArrayList();
-    private HolderLookup.Provider provider;
 
-    public RegistryLibAdvancementProvider(
-                                          RegistryCore owner,
-                                          PackOutput packOutputIn,
-                                          CompletableFuture<HolderLookup.Provider> registriesLookupIn) {
+    public RegistryLibAdvancementProvider(RegistryCore owner, BootstrapContext<Advancement> output) {
+        super(output);
         this.owner = owner;
-        this.packOutput = packOutputIn;
-        this.registriesLookup = registriesLookupIn;
-    }
-
-    public HolderLookup.Provider getProvider() {
-        return provider;
     }
 
     @Override
-    public LogicalSide getSide() {
-        return LogicalSide.SERVER;
+    public void generate() {
+        owner.genData(ProviderType.ADVANCEMENT, this);
+    }
+
+    public BootstrapContext<Advancement> output() {
+        return output;
     }
 
     public MutableComponent title(String category, String name, String title) {
@@ -61,64 +48,16 @@ public class RegistryLibAdvancementProvider
                 "advancements", Identifier.fromNamespaceAndPath(category, name), "description", desc);
     }
 
-    private @Nullable CachedOutput cache;
-    private Set<Identifier> seenAdvancements = new HashSet<>();
-
-    @Override
-    public CompletableFuture<?> run(CachedOutput cache) {
-        return registriesLookup.thenCompose(
-                lookup -> {
-                    this.provider = lookup;
-                    advancementsToSave.clear();
-
-                    try {
-                        this.cache = cache;
-                        this.seenAdvancements.clear();
-                        owner.genData(ProviderType.ADVANCEMENT, this);
-                    } finally {
-                        this.cache = null;
-                    }
-
-                    return CompletableFuture.allOf(advancementsToSave.toArray(CompletableFuture[]::new));
-                });
-    }
-
     @Override
     public void accept(@Nullable AdvancementHolder holder) {
         withConditions(holder, List.of());
     }
 
     public void withConditions(@Nullable AdvancementHolder holder, List<ICondition> conditions) {
-        CachedOutput cache = this.cache;
-        if (cache == null) {
-            throw new IllegalStateException("Cannot accept advancements outside of act");
-        }
         Objects.requireNonNull(holder, "Cannot accept a null advancement");
-        HolderLookup.Provider lookup = this.registriesLookup.join();
-        Path path = getPath(this.packOutput.getOutputFolder(), holder);
-        if (!seenAdvancements.add(holder.id())) {
-            throw new IllegalStateException("Duplicate advancement " + holder.id());
-        } else if (conditions.isEmpty()) {
-            advancementsToSave.add(
-                    DataProvider.saveStable(cache, lookup, Advancement.CODEC, holder.value(), path));
-        } else {
-            advancementsToSave.add(
-                    DataProvider.saveStable(
-                            cache,
-                            lookup,
-                            Advancement.CONDITIONAL_CODEC,
-                            Optional.of(new WithConditions<>(conditions, holder.value())),
-                            path));
-        }
-    }
-
-    private static Path getPath(Path pathIn, AdvancementHolder advancementIn) {
-        return pathIn.resolve(
-                "data/" + advancementIn.id().getNamespace() + "/advancement/" + advancementIn.id().getPath() + ".json");
-    }
-
-    @Override
-    public String getName() {
-        return "Advancements";
+        output.register(
+                ResourceKey.create(Registries.ADVANCEMENT, holder.id()),
+                holder.value(),
+                conditions.toArray(ICondition[]::new));
     }
 }

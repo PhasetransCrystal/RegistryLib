@@ -9,7 +9,7 @@ import net.ptcrys.registrylibdemo.item.SimpleItemExample;
 import net.minecraft.advancements.Advancement;
 import net.minecraft.advancements.AdvancementHolder;
 import net.minecraft.advancements.AdvancementType;
-import net.minecraft.advancements.criterion.InventoryChangeTrigger;
+import net.minecraft.advancements.triggers.InventoryChangeTrigger;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.Items;
 
@@ -40,7 +40,7 @@ public class FullAdvancementExample {
                     // ── Tab 1: RegistryCore Basics ──────────────────────────────
 
                     AdvancementHolder root = Advancement.Builder.advancement()
-                            .display(
+                            .rootDisplay(
                                     SimpleItemExample.COPPER_COIN.get(),
                                     adv.title(cat, "basics/root", "RegistryCore Basics"),
                                     adv.desc(cat, "basics/root", "Getting started with RegistryCore"),
@@ -53,7 +53,7 @@ public class FullAdvancementExample {
                             .addCriterion(
                                     "has_crafting_table",
                                     InventoryChangeTrigger.TriggerInstance.hasItems(Items.CRAFTING_TABLE))
-                            .save(adv, Identifier.fromNamespaceAndPath(cat, "basics/root"));
+                            .save(adv.output(), Identifier.fromNamespaceAndPath(cat, "basics/root"));
 
                     // TASK：获得铜币
                     AdvancementHolder getCoin = Advancement.Builder.advancement()
@@ -62,7 +62,6 @@ public class FullAdvancementExample {
                                     SimpleItemExample.COPPER_COIN.get(),
                                     adv.title(cat, "basics/get_coin", "First Coin"),
                                     adv.desc(cat, "basics/get_coin", "Obtain a Copper Coin"),
-                                    null,
                                     AdvancementType.TASK,
                                     true,
                                     true,
@@ -71,7 +70,7 @@ public class FullAdvancementExample {
                                     "has_coin",
                                     InventoryChangeTrigger.TriggerInstance.hasItems(
                                             SimpleItemExample.COPPER_COIN.get()))
-                            .save(adv, Identifier.fromNamespaceAndPath(cat, "basics/get_coin"));
+                            .save(adv.output(), Identifier.fromNamespaceAndPath(cat, "basics/get_coin"));
 
                     // GOAL：获得魔法棒
                     Advancement.Builder.advancement()
@@ -80,7 +79,6 @@ public class FullAdvancementExample {
                                     FullItemExample.MAGIC_WAND.get(),
                                     adv.title(cat, "basics/get_magic_wand", "Arcane Discovery"),
                                     adv.desc(cat, "basics/get_magic_wand", "Craft a Magic Wand"),
-                                    null,
                                     AdvancementType.GOAL,
                                     true,
                                     true,
@@ -88,12 +86,12 @@ public class FullAdvancementExample {
                             .addCriterion(
                                     "has_magic_wand",
                                     InventoryChangeTrigger.TriggerInstance.hasItems(FullItemExample.MAGIC_WAND.get()))
-                            .save(adv, Identifier.fromNamespaceAndPath(cat, "basics/get_magic_wand"));
+                            .save(adv.output(), Identifier.fromNamespaceAndPath(cat, "basics/get_magic_wand"));
 
                     // ── Tab 2: Advanced Crafting ─────────────────────────────────
 
                     AdvancementHolder advRoot = Advancement.Builder.advancement()
-                            .display(
+                            .rootDisplay(
                                     FullBlockExample.MAGIC_ORE.get().asItem(),
                                     adv.title(cat, "advanced/root", "Advanced Crafting"),
                                     adv.desc(cat, "advanced/root", "Explore advanced features"),
@@ -105,7 +103,7 @@ public class FullAdvancementExample {
                                     false)
                             .addCriterion(
                                     "has_iron", InventoryChangeTrigger.TriggerInstance.hasItems(Items.IRON_INGOT))
-                            .save(adv, Identifier.fromNamespaceAndPath(cat, "advanced/root"));
+                            .save(adv.output(), Identifier.fromNamespaceAndPath(cat, "advanced/root"));
 
                     // GOAL：挖到魔法矿石
                     Advancement.Builder.advancement()
@@ -114,7 +112,6 @@ public class FullAdvancementExample {
                                     FullBlockExample.MAGIC_ORE.get().asItem(),
                                     adv.title(cat, "advanced/mine_magic_ore", "Magical Mining"),
                                     adv.desc(cat, "advanced/mine_magic_ore", "Mine a block of Magic Ore"),
-                                    null,
                                     AdvancementType.GOAL,
                                     true,
                                     true,
@@ -123,7 +120,7 @@ public class FullAdvancementExample {
                                     "has_magic_ore",
                                     InventoryChangeTrigger.TriggerInstance.hasItems(
                                             FullBlockExample.MAGIC_ORE.get().asItem()))
-                            .save(adv, Identifier.fromNamespaceAndPath(cat, "advanced/mine_magic_ore"));
+                            .save(adv.output(), Identifier.fromNamespaceAndPath(cat, "advanced/mine_magic_ore"));
 
                     // CHALLENGE（隐藏）：获得三级计时器
                     Advancement.Builder.advancement()
@@ -132,7 +129,6 @@ public class FullAdvancementExample {
                                     FullBlockExample.TIMER_TIER_3.get().asItem(),
                                     adv.title(cat, "advanced/build_timer", "Time Lord"),
                                     adv.desc(cat, "advanced/build_timer", "Craft a Tier 3 Timer"),
-                                    null,
                                     AdvancementType.CHALLENGE,
                                     true,
                                     true,
@@ -141,7 +137,7 @@ public class FullAdvancementExample {
                                     "has_timer_3",
                                     InventoryChangeTrigger.TriggerInstance.hasItems(
                                             FullBlockExample.TIMER_TIER_3.get().asItem()))
-                            .save(adv, Identifier.fromNamespaceAndPath(cat, "advanced/build_timer"));
+                            .save(adv.output(), Identifier.fromNamespaceAndPath(cat, "advanced/build_timer"));
                 });
     }
 }

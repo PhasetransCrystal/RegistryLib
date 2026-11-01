@@ -13,6 +13,7 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
 import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.Vec3;
 
 import com.mojang.serialization.Codec;
 import org.jspecify.annotations.Nullable;
@@ -95,7 +96,7 @@ public class InfuserBlockEntity extends BlockEntity {
 
             // 给予经验
             if (experience > 0) {
-                ExperienceOrb.award(serverLevel, pos.above().getCenter(), (int) experience);
+                ExperienceOrb.award(serverLevel, Vec3.atCenterOf(pos.above()), (int) experience);
             }
 
             be.progress = 0;

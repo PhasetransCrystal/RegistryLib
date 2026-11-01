@@ -230,11 +230,11 @@ Prefer `chunkState(...)` or `worldState(...)` when the attachment represents gam
 
 ## WorldgenFeatureEntry
 
-**Record fields:** `configuredKey`, `placedKey`
+**Record fields:** `featureKey`, `placedKey`
 
 | Method | Return type | Description |
 | --- | --- | --- |
-| `configuredKey()` | `ResourceKey<ConfiguredFeature<?, ?>>` | Key for the generated configured feature |
+| `featureKey()` | `ResourceKey<Feature>` | Key for the generated feature |
 | `placedKey()` | `ResourceKey<PlacedFeature>` | Key for the generated placed feature |
 
 ## EntityEntry\<T\>

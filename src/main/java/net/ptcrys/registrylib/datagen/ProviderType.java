@@ -5,7 +5,6 @@ import net.ptcrys.registrylib.datagen.generator.RegistryLibBlockModelGenerator;
 import net.ptcrys.registrylib.datagen.generator.RegistryLibItemModelGenerator;
 import net.ptcrys.registrylib.datagen.loot.RegistryLibLootTableProvider;
 import net.ptcrys.registrylib.datagen.provider.RegistryLibAdvancementProvider;
-import net.ptcrys.registrylib.datagen.provider.RegistryLibDatapackProvider;
 import net.ptcrys.registrylib.datagen.provider.RegistryLibEnchantmentTagsProvider;
 import net.ptcrys.registrylib.datagen.provider.RegistryLibGeneralResourceProvider;
 import net.ptcrys.registrylib.datagen.provider.RegistryLibItemTagsProvider;
@@ -13,12 +12,10 @@ import net.ptcrys.registrylib.datagen.provider.RegistryLibLangProvider;
 import net.ptcrys.registrylib.datagen.provider.RegistryLibModelProvider;
 import net.ptcrys.registrylib.datagen.provider.RegistryLibProvider;
 import net.ptcrys.registrylib.datagen.provider.RegistryLibRecipeProvider;
-import net.ptcrys.registrylib.datagen.provider.RegistryLibRecipeRunner;
 import net.ptcrys.registrylib.datagen.provider.RegistryLibTagsProvider;
 
 import net.minecraft.core.HolderLookup;
 import net.minecraft.core.Registry;
-import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.data.PackOutput;
 import net.minecraft.resources.ResourceKey;
@@ -32,7 +29,6 @@ import org.jetbrains.annotations.NotNull;
 
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
-import java.util.function.Function;
 import java.util.function.Supplier;
 
 @FunctionalInterface
@@ -41,11 +37,9 @@ public interface ProviderType<T extends RegistryLibProvider> extends GeneratorTy
     ProviderType NULL = unusedContext -> null;
 
     // SERVER DATA
-    ProviderType<RegistryLibRecipeRunner> RECIPE_PROVIDER = registerServerData("recipe", RegistryLibRecipeRunner::new);
-    GeneratorType<RegistryLibRecipeProvider> RECIPE = RECIPE_PROVIDER.createGenerator("recipe");
-    ProviderType<RegistryLibLootTableProvider> LOOT = registerServerData("loot", RegistryLibLootTableProvider::new);
-    ProviderType<RegistryLibAdvancementProvider> ADVANCEMENT = registerServerData("advancement", RegistryLibAdvancementProvider::new);
-    ProviderType<RegistryLibDatapackProvider> DATAPACK_REGISTRIES = registerServerData("datapack_registries", RegistryLibDatapackProvider::new);
+    GeneratorType<RegistryLibRecipeProvider> RECIPE = new GeneratorType<>() {};
+    GeneratorType<RegistryLibLootTableProvider> LOOT = new GeneratorType<>() {};
+    GeneratorType<RegistryLibAdvancementProvider> ADVANCEMENT = new GeneratorType<>() {};
     ProviderType<RegistryLibEnchantmentTagsProvider> ENCHANTMENT_TAGS = registerTag(
             "tags/enchantment",
             Registries.ENCHANTMENT,
@@ -54,8 +48,7 @@ public interface ProviderType<T extends RegistryLibProvider> extends GeneratorTy
     ProviderType<RegistryLibTagsProvider.IntrinsicImpl<Block>> BLOCK_TAGS = registerIntrinsicTag(
             "tags/block",
             "blocks",
-            Registries.BLOCK,
-            block -> BuiltInRegistries.BLOCK.getResourceKey(block).orElseThrow());
+            Registries.BLOCK);
     ProviderType<RegistryLibItemTagsProvider> ITEM_TAGS = registerTag(
             "tags/item",
             Registries.ITEM,
@@ -69,13 +62,11 @@ public interface ProviderType<T extends RegistryLibProvider> extends GeneratorTy
     ProviderType<RegistryLibTagsProvider.IntrinsicImpl<Fluid>> FLUID_TAGS = registerIntrinsicTag(
             "tags/fluid",
             "fluids",
-            Registries.FLUID,
-            fluid -> BuiltInRegistries.FLUID.getResourceKey(fluid).orElseThrow());
+            Registries.FLUID);
     ProviderType<RegistryLibTagsProvider.IntrinsicImpl<EntityType<?>>> ENTITY_TAGS = registerIntrinsicTag(
             "tags/entity",
             "entity_types",
-            Registries.ENTITY_TYPE,
-            entityType -> BuiltInRegistries.ENTITY_TYPE.getResourceKey(entityType).orElseThrow());
+            Registries.ENTITY_TYPE);
 
     // CLIENT DATA
     ProviderType<RegistryLibModelProvider> MODEL = registerClientProvider(
@@ -172,13 +163,12 @@ public interface ProviderType<T extends RegistryLibProvider> extends GeneratorTy
     static <T> ProviderType<RegistryLibTagsProvider.IntrinsicImpl<T>> registerIntrinsicTag(
                                                                                            String providerName,
                                                                                            String typeName,
-                                                                                           ResourceKey<? extends Registry<T>> registry,
-                                                                                           Function<T, ResourceKey<T>> keyExtractor) {
+                                                                                           ResourceKey<? extends Registry<T>> registry) {
         return registerTag(
                 providerName,
                 registry,
                 c -> new RegistryLibTagsProvider.IntrinsicImpl<>(
-                        c.parent(), c.type(), typeName, c.output(), registry, c.provider(), keyExtractor));
+                        c.parent(), c.type(), typeName, c.output(), registry, c.provider()));
     }
 
     static <T extends RegistryLibProvider> T create(

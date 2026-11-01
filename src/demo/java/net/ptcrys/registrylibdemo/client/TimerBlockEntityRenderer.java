@@ -65,7 +65,7 @@ public class TimerBlockEntityRenderer
         // Move to top center of the block
         poseStack.translate(0.5f, 1.001f, 0.5f);
         // Rotate to face up: Rx(-90) maps local +Z -> world +Y, so text is visible from above
-        poseStack.mulPose(Axis.XP.rotationDegrees(-90));
+        poseStack.mulPose(new org.joml.Matrix4f().rotation(Axis.XP.rotationDegrees(-90)));
         // Scale down - text is rendered at ~8px per character
         float scale = 1.0f / 96.0f;
         poseStack.scale(scale, -scale, scale);
@@ -99,7 +99,7 @@ public class TimerBlockEntityRenderer
         // Move to center of block
         poseStack.translate(0.5f, 0.5f, 0.5f);
         // Rotate so that local +Z faces the target side
-        poseStack.mulPose(Axis.YP.rotationDegrees(yRotation));
+        poseStack.mulPose(new org.joml.Matrix4f().rotation(Axis.YP.rotationDegrees(yRotation)));
         // Move to just outside the face surface
         poseStack.translate(0.0f, 0.0f, 0.501f);
         // No extra flip needed: text in local XY is already visible from the local +Z side (outward)

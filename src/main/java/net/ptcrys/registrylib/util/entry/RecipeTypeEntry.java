@@ -104,7 +104,8 @@ public class RecipeTypeEntry<T extends Recipe<?>>
      */
     @StandardAPI
     public RecipeTypeEntry<T> addRecipe(
-                                        @NotNull String recipeName, @NotNull Function<HolderLookup.Provider, T> recipeFactory) {
+                                        @NotNull String recipeName,
+                                        @NotNull Function<net.minecraft.data.worldgen.BootstrapContextAccess, T> recipeFactory) {
         String typeName = key.identifier().getPath();
         core.addRecipe(typeName + "/" + recipeName, recipeFactory);
         return this;

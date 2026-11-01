@@ -17,6 +17,8 @@ import net.ptcrys.registrylib.datagen.DataProviderInitializer;
 import net.ptcrys.registrylib.datagen.GeneratorType;
 import net.ptcrys.registrylib.datagen.ProviderType;
 import net.ptcrys.registrylib.datagen.RegistryLibDataProvider;
+import net.ptcrys.registrylib.datagen.loot.RegistryLibLootTableProvider;
+import net.ptcrys.registrylib.datagen.provider.RegistryLibAdvancementProvider;
 import net.ptcrys.registrylib.datagen.provider.RegistryLibLangProvider;
 import net.ptcrys.registrylib.datagen.provider.RegistryLibRecipeProvider;
 import net.ptcrys.registrylib.datagen.provider.RegistryLibTagsProvider;
@@ -49,6 +51,7 @@ import net.minecraft.core.WritableRegistry;
 import net.minecraft.core.component.DataComponentType;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
+import net.minecraft.data.loot.LootTableProvider;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
@@ -79,14 +82,14 @@ import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockBehaviour;
 import net.minecraft.world.level.levelgen.Heightmap;
-import net.minecraft.world.level.levelgen.feature.ConfiguredFeature;
-import net.minecraft.world.level.levelgen.feature.configurations.FeatureConfiguration;
+import net.minecraft.world.level.levelgen.feature.Feature;
 import net.minecraft.world.level.material.Fluid;
 import net.neoforged.fml.ModList;
 import net.neoforged.neoforge.attachment.AttachmentType;
 import net.neoforged.neoforge.attachment.IAttachmentHolder;
 import net.neoforged.neoforge.common.crafting.IngredientType;
 import net.neoforged.neoforge.data.event.GatherDataEvent;
+import net.neoforged.neoforge.data.event.GatherDataRegistryEntriesEvent;
 import net.neoforged.neoforge.event.BuildCreativeModeTabContentsEvent;
 import net.neoforged.neoforge.event.entity.EntityAttributeCreationEvent;
 import net.neoforged.neoforge.event.entity.RegisterSpawnPlacementsEvent;
@@ -184,7 +187,10 @@ public class RegistryCore {
         if (CORES_BY_MODID.putIfAbsent(modid, this) == null) {
             ModList.get()
                     .getModContainerById(modid)
-                    .ifPresent(c -> c.getEventBus().addListener(this::onGatherData));
+                    .ifPresent(c -> {
+                        c.getEventBus().addListener(this::onGatherData);
+                        c.getEventBus().addListener(this::onGatherDataRegistryEntries);
+                    });
             REGISTRY_CORES.add(this);
         }
     }
@@ -1074,29 +1080,29 @@ public class RegistryCore {
     // --- Worldgen ---
 
     @StandardAPI
-    public <C extends FeatureConfiguration, P> WorldgenFeatureBuilder<C, P> worldgenFeature(
-                                                                                            @NotNull P parent, @NotNull String name, @NotNull ConfiguredFeature<C, ?> configuredFeature) {
-        return WorldgenFeatureBuilder.create(this, parent, name, configuredFeature);
+    public <P> WorldgenFeatureBuilder<P> worldgenFeature(
+                                                         @NotNull P parent, @NotNull String name, @NotNull Feature feature) {
+        return WorldgenFeatureBuilder.create(this, parent, name, feature);
     }
 
-    @SyntaxSugar("worldgenFeature(parent, name, () -> configuredFeature)")
-    public <C extends FeatureConfiguration, P> WorldgenFeatureBuilder<C, P> worldgenFeature(
-                                                                                            @NotNull P parent,
-                                                                                            @NotNull String name,
-                                                                                            @NotNull Supplier<ConfiguredFeature<C, ?>> configuredFeature) {
-        return WorldgenFeatureBuilder.create(this, parent, name, configuredFeature);
+    @SyntaxSugar("worldgenFeature(parent, name, () -> feature)")
+    public <P> WorldgenFeatureBuilder<P> worldgenFeature(
+                                                         @NotNull P parent,
+                                                         @NotNull String name,
+                                                         @NotNull Supplier<? extends Feature> feature) {
+        return WorldgenFeatureBuilder.create(this, parent, name, feature);
     }
 
-    @SyntaxSugar("worldgenFeature(this, name, configuredFeature)")
-    public <C extends FeatureConfiguration> WorldgenFeatureBuilder<C, RegistryCore> worldgenFeature(
-                                                                                                    @NotNull String name, @NotNull ConfiguredFeature<C, ?> configuredFeature) {
-        return worldgenFeature(this, name, configuredFeature);
+    @SyntaxSugar("worldgenFeature(this, name, feature)")
+    public WorldgenFeatureBuilder<RegistryCore> worldgenFeature(
+                                                                @NotNull String name, @NotNull Feature feature) {
+        return worldgenFeature(this, name, feature);
     }
 
-    @SyntaxSugar("worldgenFeature(this, name, configuredFeature)")
-    public <C extends FeatureConfiguration> WorldgenFeatureBuilder<C, RegistryCore> worldgenFeature(
-                                                                                                    @NotNull String name, @NotNull Supplier<ConfiguredFeature<C, ?>> configuredFeature) {
-        return worldgenFeature(this, name, configuredFeature);
+    @SyntaxSugar("worldgenFeature(this, name, () -> feature)")
+    public WorldgenFeatureBuilder<RegistryCore> worldgenFeature(
+                                                                @NotNull String name, @NotNull Supplier<? extends Feature> feature) {
+        return worldgenFeature(this, name, feature);
     }
 
     // --- Block Entities ---
@@ -1231,14 +1237,14 @@ public class RegistryCore {
     @StandardAPI("Adds a recipe for datagen that requires registry lookups.")
     public void addRecipe(
                           @NotNull String id,
-                          @NotNull Function<net.minecraft.core.HolderLookup.Provider, ? extends Recipe<?>> recipeFactory) {
+                          @NotNull Function<net.minecraft.data.worldgen.BootstrapContextAccess, ? extends Recipe<?>> recipeFactory) {
         if (doDatagen()) {
             final String modid = getModid();
             addDataGenerator(
                     ProviderType.RECIPE,
                     (RegistryLibRecipeProvider prov) -> prov.accept(
                             ResourceKey.create(Registries.RECIPE, Identifier.fromNamespaceAndPath(modid, id)),
-                            recipeFactory.apply(prov.registries()),
+                            recipeFactory.apply(prov),
                             null));
         }
     }
@@ -1526,6 +1532,20 @@ public class RegistryCore {
         event
                 .getGenerator()
                 .addProvider(true, pipeline.provider = new RegistryLibDataProvider(this, modid, event));
+    }
+
+    private void onGatherDataRegistryEntries(GatherDataRegistryEntriesEvent event) {
+        if (!doDatagen()) return;
+        getDataGenInitializer().applyTo(event);
+
+        List<LootTableProvider.SubProviderEntry> lootEntries = new RegistryLibLootTableProvider(this).subProviders(this);
+        if (!lootEntries.isEmpty()) {
+            event.lootTable(
+                    lootEntries.get(0),
+                    lootEntries.subList(1, lootEntries.size()).toArray(LootTableProvider.SubProviderEntry[]::new));
+        }
+        event.advancement(output -> new RegistryLibAdvancementProvider(this, output));
+        event.recipe((recipeOutput, advancementOutput) -> new RegistryLibRecipeProvider(this, recipeOutput, advancementOutput));
     }
 
     private static final class Registration<R, T extends R> {

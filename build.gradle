@@ -64,7 +64,6 @@ generateModMetadata.doFirst {
     mkdir('run/client')
     mkdir('run/server')
     mkdir('run/clientData')
-    mkdir('run/serverData')
     mkdir('run/gameTestServer')
 }
 

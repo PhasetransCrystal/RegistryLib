@@ -52,7 +52,7 @@ jobs:
           REGISTRYLIBDEMO_FAST_RUN: 'true'
         run: |
           chmod +x gradlew
-          ./gradlew runClientData runServerData --no-daemon --build-cache
+          ./gradlew runClientData --no-daemon --build-cache
       - name: Verify checks and GameTests
         env:
           REGISTRYLIBDEMO_FAST_RUN: 'true'

@@ -8,12 +8,12 @@ import net.ptcrys.registrylib.util.TextureRef;
 import net.ptcrys.registrylib.util.entry.BlockEntry;
 import net.ptcrys.registrylib.util.entry.ItemEntry;
 
-import net.minecraft.advancements.criterion.StatePropertiesPredicate;
+import net.minecraft.advancements.predicates.StatePropertiesPredicate;
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.level.block.CropBlock;
 import net.minecraft.world.level.block.state.BlockBehaviour;
-import net.minecraft.world.level.storage.loot.predicates.LootItemBlockStatePropertyCondition;
+import net.minecraft.world.level.storage.loot.predicates.MatchBlock;
 
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiConsumer;
@@ -141,10 +141,11 @@ public final class CropBuilder<P> {
                         block,
                         grown,
                         seedEntry.get(),
-                        LootItemBlockStatePropertyCondition.hasBlockStateProperties(block)
-                                .setProperties(
-                                        StatePropertiesPredicate.Builder.properties()
-                                                .hasProperty(CropBlock.AGE, block.getMaxAge()))));
+                        MatchBlock.blockMatches(
+                                tables.blockLookup(),
+                                block,
+                                StatePropertiesPredicate.Builder.properties()
+                                        .hasProperty(CropBlock.AGE, block.getMaxAge()))));
     }
 
     private void generateLoot(RegistryLibBlockLootTables tables, RegistryLibCropBlock block) {

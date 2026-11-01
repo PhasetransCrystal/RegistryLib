@@ -48,13 +48,13 @@ public class RegistryLibDataProvider implements DataProvider {
 
     public RegistryLibDataProvider(RegistryCore parent, String modid, GatherDataEvent event) {
         this.mod = modid;
-        this.registriesLookup = event.getLookupProvider();
+        this.registriesLookup = event.getWorldLookupProvider();
 
         LOGGER.debug("Gathering providers");
         Map<ProviderType<?>, RegistryLibProvider> known = new Reference2ReferenceOpenHashMap<>();
         for (DataProviderInitializer.Sorted sorted : parent.getDataGenInitializer().getSortedProviders()) {
             ProviderType<?> type = sorted.type();
-            var lookup = registriesLookup;
+            var lookup = type == ProviderType.ENCHANTMENT_TAGS ? event.getReloadableLookupProvider() : registriesLookup;
             if (sorted.parent() != null)
                 lookup = ((RegistryLibLookupFillerProvider) known.get(sorted.parent())).getFilledProvider();
             RegistryLibProvider prov = ProviderType.create(type, parent, event, known, lookup);

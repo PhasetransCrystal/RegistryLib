@@ -72,6 +72,7 @@ public final class RegistryLibGameTestSupport {
                                                                            Holder<TestEnvironmentDefinition<?>> environment, int maxTicks) {
         return new TestData<>(
                 environment,
+                net.minecraft.world.level.Level.OVERWORLD,
                 Identifier.withDefaultNamespace("empty"),
                 maxTicks,
                 0,

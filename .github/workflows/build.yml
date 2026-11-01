@@ -49,7 +49,7 @@ jobs:
       - name: Generate resources
         run: |
           chmod +x gradlew
-          ./gradlew clean runClientData runServerData --no-daemon --build-cache
+          ./gradlew clean runClientData --no-daemon --build-cache
       - name: Build, verify, and publish
         run: |
           chmod +x gradlew

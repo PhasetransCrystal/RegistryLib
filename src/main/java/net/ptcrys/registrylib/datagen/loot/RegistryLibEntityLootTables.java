@@ -2,9 +2,9 @@ package net.ptcrys.registrylib.datagen.loot;
 
 import net.ptcrys.registrylib.RegistryCore;
 
-import net.minecraft.core.HolderLookup;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.data.loot.EntityLootSubProvider;
+import net.minecraft.data.loot.LootTableSubProvider;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.flag.FeatureFlagSet;
 import net.minecraft.world.flag.FeatureFlags;
@@ -21,12 +21,12 @@ public class RegistryLibEntityLootTables extends EntityLootSubProvider
     private final Consumer<RegistryLibEntityLootTables> callback;
 
     public RegistryLibEntityLootTables(
-                                       HolderLookup.Provider provider,
+                                       LootTableSubProvider.Context output,
                                        RegistryCore parent,
                                        Consumer<RegistryLibEntityLootTables> callback) {
         // allowed=allFlags (output loot for any entity), required=empty (don't crash for entities
         // without .loot())
-        super(FeatureFlags.REGISTRY.allFlags(), FeatureFlagSet.of(), provider);
+        super(FeatureFlags.REGISTRY.allFlags(), FeatureFlagSet.of(), output);
         this.parent = parent;
         this.callback = callback;
     }

@@ -10,7 +10,7 @@ description: Frequently asked questions about RegistryLib.
 
 ### What Minecraft / NeoForge versions does RegistryLib support?
 
-RegistryLib targets **NeoForge 26.1.2.125** on **Minecraft 26.1.2**. Check the [GitHub releases](https://github.com/PhasetransCrystal/RegistryLib/releases) page for the exact version matrix.
+RegistryLib targets **NeoForge 26.3.0.101** on **Minecraft 26.3**. Check the [GitHub releases](https://github.com/PhasetransCrystal/RegistryLib/releases) page for the exact version matrix.
 
 ### Is RegistryLib a fork of Registrate?
 
