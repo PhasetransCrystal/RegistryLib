@@ -9,8 +9,6 @@ import net.minecraft.core.WritableRegistry;
 import net.minecraft.data.PackOutput;
 import net.minecraft.data.loot.LootTableProvider;
 import net.minecraft.data.loot.LootTableSubProvider;
-import net.minecraft.data.loot.packs.VanillaLootTableProvider;
-import net.minecraft.resources.ResourceKey;
 import net.minecraft.util.ProblemReporter;
 import net.minecraft.util.context.ContextKeySet;
 import net.minecraft.world.level.storage.loot.LootTable;
@@ -26,7 +24,6 @@ import org.apache.commons.lang3.function.TriFunction;
 
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
-import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 
 public class RegistryLibLootTableProvider extends LootTableProvider implements RegistryLibProvider {
@@ -69,7 +66,6 @@ public class RegistryLibLootTableProvider extends LootTableProvider implements R
     @SuppressWarnings("rawtypes")
     private final Multimap<LootType<?>, Consumer<? super RegistryLibLootTables>> specialLootActions = HashMultimap.create();
 
-    private final Multimap<ContextKeySet, Consumer<BiConsumer<ResourceKey<LootTable>, LootTable.Builder>>> lootActions = HashMultimap.create();
     private final Set<RegistryLibLootTables> currentLootCreators = new ReferenceOpenHashSet<>();
 
     private final CompletableFuture<HolderLookup.Provider> providerFuture;
@@ -81,7 +77,7 @@ public class RegistryLibLootTableProvider extends LootTableProvider implements R
         super(
                 packOutput,
                 Set.of(),
-                VanillaLootTableProvider.create(packOutput, provider).getTables(),
+                List.of(),
                 provider);
         this.parent = parent;
         this.providerFuture = provider;
@@ -109,11 +105,6 @@ public class RegistryLibLootTableProvider extends LootTableProvider implements R
     public <T extends RegistryLibLootTables> void addLootAction(
                                                                 LootType<T> type, Consumer<T> action) {
         this.specialLootActions.put(type, (Consumer<RegistryLibLootTables>) action);
-    }
-
-    public void addLootAction(
-                              ContextKeySet set, Consumer<BiConsumer<ResourceKey<LootTable>, LootTable.Builder>> action) {
-        this.lootActions.put(set, action);
     }
 
     private LootTableSubProvider getLootCreator(

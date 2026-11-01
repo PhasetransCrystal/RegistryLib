@@ -9,6 +9,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 
 public interface MultiMap<K, V> {
 
@@ -52,18 +53,19 @@ public interface MultiMap<K, V> {
 
         @Override
         public Map<K, Collection<V>> getMap() {
-            return map;
+            return Collections.unmodifiableMap(map);
         }
 
         @Override
         public Collection<V> get(K key) {
             var values = map.get(key);
-            if (values != null) return values;
+            if (values != null) return Collections.unmodifiableCollection(values);
             return Collections.emptyList();
         }
 
         @Override
         public void put(K key, V value) {
+            Objects.requireNonNull(value, "value");
             if (isRefMap) {
                 ((Reference2ReferenceMap<K, Collection<V>>) map).computeIfAbsent(key, factory).add(value);
             } else {

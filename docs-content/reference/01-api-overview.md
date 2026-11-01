@@ -9,7 +9,7 @@ description: Entry points, builder families, and common chain patterns.
 This page is for quick lookup only, not full teaching. It answers "which entry point should I start from?" and "what do common chains usually look like?"
 
 :::note
-The code snippets on this page are short excerpts from the runnable `RegistryLibTest` examples, not invented pseudo-code.
+The code snippets on this page are short excerpts from the runnable `RegistryLibDemo` examples, not invented pseudo-code.
 :::
 
 ## Which Entry Point Should I Start From?

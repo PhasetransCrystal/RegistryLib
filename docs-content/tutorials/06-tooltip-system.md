@@ -131,7 +131,7 @@ When the panels together would overflow the screen, RegistryLib paginates the se
 
 Page state is display-only state. RegistryLib does not write page information into the `ItemStack`. The page resets when the hovered item changes, when the same item has different data components, or when a non-RegistryLib tooltip is shown.
 
-The test mod includes `registrylibtest:tooltip_stress_tester` as a stress item with 20 separate roots and 100 total child nodes. Use it when checking overflow, pagination, and custom `SubNode` layout behavior in-game.
+The test mod includes `registrylibdemo:tooltip_stress_tester` as a stress item with 20 separate roots and 100 total child nodes. Use it when checking overflow, pagination, and custom `SubNode` layout behavior in-game.
 
 ## Boundaries and Pitfalls
 

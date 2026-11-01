@@ -2,6 +2,7 @@ package net.ptcrys.registrylib.worldgen;
 
 import net.ptcrys.registrylib.RegistryCore;
 import net.ptcrys.registrylib.annotations.StandardAPI;
+import net.ptcrys.registrylib.datagen.DataProviderInitializer;
 
 import net.minecraft.core.HolderSet;
 import net.minecraft.core.registries.Registries;
@@ -76,6 +77,9 @@ public final class WorldgenFeatureBuilder<C extends FeatureConfiguration, P> {
     @StandardAPI
     public WorldgenFeatureBuilder<C, P> addToBiomes(
                                                     TagKey<Biome> biomeTag, GenerationStep.Decoration decoration) {
+        if (this.biomeTag != null) {
+            throw new IllegalStateException("Biome placement already configured for: " + name);
+        }
         this.biomeTag = biomeTag;
         this.decoration = decoration;
         return this;
@@ -91,32 +95,43 @@ public final class WorldgenFeatureBuilder<C extends FeatureConfiguration, P> {
                 Registries.CONFIGURED_FEATURE, Identifier.fromNamespaceAndPath(core.getModid(), name));
         ResourceKey<PlacedFeature> placedKey = ResourceKey.create(
                 Registries.PLACED_FEATURE, Identifier.fromNamespaceAndPath(core.getModid(), name));
-        core.getDataGenInitializer()
+        TagKey<Biome> capturedBiomeTag = biomeTag;
+        GenerationStep.Decoration capturedDecoration = decoration;
+        List<PlacementModifier> capturedPlacements = List.copyOf(placements);
+        ResourceKey<net.neoforged.neoforge.common.world.BiomeModifier> modifierKey = capturedBiomeTag == null ? null : ResourceKey.create(
+                NeoForgeRegistries.Keys.BIOME_MODIFIERS,
+                Identifier.fromNamespaceAndPath(core.getModid(), name + "_add_feature"));
+
+        DataProviderInitializer initializer = core.getDataGenInitializer();
+        initializer.reserve(configuredKey);
+        initializer.reserve(placedKey);
+        if (modifierKey != null) {
+            initializer.reserve(modifierKey);
+        }
+
+        initializer
                 .add(
                         Registries.CONFIGURED_FEATURE,
                         ctx -> ctx.register(configuredKey, configuredFeature.get()));
-        core.getDataGenInitializer()
+        initializer
                 .add(
                         Registries.PLACED_FEATURE,
                         ctx -> ctx.register(
                                 placedKey,
                                 new PlacedFeature(
                                         ctx.lookup(Registries.CONFIGURED_FEATURE).getOrThrow(configuredKey),
-                                        List.copyOf(placements))));
-        if (biomeTag != null) {
-            ResourceKey<net.neoforged.neoforge.common.world.BiomeModifier> modifierKey = ResourceKey.create(
-                    NeoForgeRegistries.Keys.BIOME_MODIFIERS,
-                    Identifier.fromNamespaceAndPath(core.getModid(), name + "_add_feature"));
-            core.getDataGenInitializer()
+                                        capturedPlacements)));
+        if (modifierKey != null) {
+            initializer
                     .add(
                             NeoForgeRegistries.Keys.BIOME_MODIFIERS,
                             ctx -> ctx.register(
                                     modifierKey,
                                     new BiomeModifiers.AddFeaturesBiomeModifier(
-                                            ctx.lookup(Registries.BIOME).getOrThrow(biomeTag),
+                                            ctx.lookup(Registries.BIOME).getOrThrow(capturedBiomeTag),
                                             HolderSet.direct(
                                                     ctx.lookup(Registries.PLACED_FEATURE).getOrThrow(placedKey)),
-                                            decoration)));
+                                            capturedDecoration)));
         }
         return new WorldgenFeatureEntry(configuredKey, placedKey);
     }

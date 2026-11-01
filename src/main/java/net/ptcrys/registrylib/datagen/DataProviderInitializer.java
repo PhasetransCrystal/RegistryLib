@@ -22,6 +22,8 @@ public class DataProviderInitializer {
     @SuppressWarnings("rawtypes")
     private final Map<ResourceKey<? extends Registry<?>>, List<RegistrySetBuilder.RegistryBootstrap>> pendingBootstraps = new ConcurrentHashMap<>();
 
+    private final Set<ResourceKey<?>> reservedKeys = ConcurrentHashMap.newKeySet();
+
     public DataProviderInitializer() {
         addDependency(ProviderType.ITEM_TAGS, ProviderType.BLOCK_TAGS);
         addDependency(ProviderType.ENCHANTMENT_TAGS, ProviderType.DATAPACK_REGISTRIES);
@@ -63,6 +65,12 @@ public class DataProviderInitializer {
                 throw new IllegalStateException("Looping dependency detected: " + remain);
         }
         return ans;
+    }
+
+    public void reserve(ResourceKey<?> key) {
+        if (!reservedKeys.add(key)) {
+            throw new IllegalStateException("Duplicate datapack entry: " + key.identifier());
+        }
     }
 
     @SuppressWarnings({ "unchecked", "rawtypes" })

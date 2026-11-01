@@ -28,13 +28,20 @@ public class StateDebugConfig {
     }
 
     public StateDebugConfig readPermission(int readPermission) {
-        this.readPermission = readPermission;
+        this.readPermission = checkPermission(readPermission);
         return this;
     }
 
     public StateDebugConfig writePermission(int writePermission) {
-        this.writePermission = writePermission;
+        this.writePermission = checkPermission(writePermission);
         return this;
+    }
+
+    private static int checkPermission(int permission) {
+        if (permission < 0 || permission > 4) {
+            throw new IllegalArgumentException("Permission must be between 0 and 4: " + permission);
+        }
+        return permission;
     }
 
     public StateDebugConfig configure(UnaryOperator<StateDebugConfig> config) {

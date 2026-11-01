@@ -47,9 +47,15 @@ jobs:
         uses: gradle/actions/setup-gradle@v4
         with:
           cache-read-only: false
-      - name: Verify data generation, checks, and GameTests
+      - name: Generate resources
         env:
-          REGISTRYLIBTEST_FAST_RUN: 'true'
+          REGISTRYLIBDEMO_FAST_RUN: 'true'
         run: |
           chmod +x gradlew
-          ./gradlew runData check runGameTestServer --no-daemon --build-cache
+          ./gradlew runClientData runServerData --no-daemon --build-cache
+      - name: Verify checks and GameTests
+        env:
+          REGISTRYLIBDEMO_FAST_RUN: 'true'
+        run: |
+          chmod +x gradlew
+          ./gradlew check runGameTestServer --no-daemon --build-cache

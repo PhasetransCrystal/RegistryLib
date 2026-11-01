@@ -204,7 +204,7 @@ The important nuance is the one noted in `ModRegistryCore`: Java generic invaria
 Item chains in the test project can use the short form directly:
 
 ```java
-public static final ItemEntry<Item> COPPER_COIN = RegistryLibTest.REGISTRYLIB
+public static final ItemEntry<Item> COPPER_COIN = RegistryLibDemo.REGISTRYLIB
         .item("copper_coin", Item::new)
         .langCn("Copper Coin (zh_cn)")
         .lang("Copper Coin")
@@ -214,8 +214,8 @@ public static final ItemEntry<Item> COPPER_COIN = RegistryLibTest.REGISTRYLIB
 For Blocks and Fluids, use the explicit-`parent` overload when you want the custom Builder API to remain visible:
 
 ```java
-public static final BlockEntry<Block> DECORATIVE_STONE = RegistryLibTest.REGISTRYLIB
-        .block(RegistryLibTest.REGISTRYLIB, "decorative_stone", Block::new)
+public static final BlockEntry<Block> DECORATIVE_STONE = RegistryLibDemo.REGISTRYLIB
+        .block(RegistryLibDemo.REGISTRYLIB, "decorative_stone", Block::new)
         .langCn("Decorative Stone (zh_cn)")
         .initialProperties(() -> Blocks.STONE)
         .lang("Decorative Stone")
@@ -224,8 +224,8 @@ public static final BlockEntry<Block> DECORATIVE_STONE = RegistryLibTest.REGISTR
 ```
 
 ```java
-public static final FluidEntry<BaseFlowingFluid.Flowing> ACID = RegistryLibTest.REGISTRYLIB
-        .fluid(RegistryLibTest.REGISTRYLIB, "acid", STILL, FLOW, BaseFlowingFluid.Flowing::new)
+public static final FluidEntry<BaseFlowingFluid.Flowing> ACID = RegistryLibDemo.REGISTRYLIB
+        .fluid(RegistryLibDemo.REGISTRYLIB, "acid", STILL, FLOW, BaseFlowingFluid.Flowing::new)
         .langCn("Acid (zh_cn)")
         .lang("Acid")
         .register();

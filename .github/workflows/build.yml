@@ -25,7 +25,7 @@ jobs:
     timeout-minutes: 45
     env:
       RELEASE_BUILD: 'true'
-      REGISTRYLIBTEST_FAST_RUN: 'true'
+      REGISTRYLIBDEMO_FAST_RUN: 'true'
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -40,17 +40,21 @@ jobs:
         uses: gradle/actions/setup-gradle@v4
         with:
           cache-read-only: false
-      - name: Generate data, verify, build, and publish
+      - name: Generate resources
         run: |
           chmod +x gradlew
-          ./gradlew clean runData build publish --no-daemon --build-cache
+          ./gradlew clean runClientData runServerData --no-daemon --build-cache
+      - name: Build, verify, and publish
+        run: |
+          chmod +x gradlew
+          ./gradlew build publish --no-daemon --build-cache
         env:
           ORG_GRADLE_PROJECT_ptcrysUsername: ${{ secrets.PTCRYS_USERNAME }}
           ORG_GRADLE_PROJECT_ptcrysPassword: ${{ secrets.PTCRYS_PASSWORD }}
       - name: Get version
         id: version
         run: |
-          VERSION=$(./gradlew -q properties --no-daemon 2>/dev/null | grep '^version:' | awk '{print $2}')
+          VERSION=$(./gradlew -q printBuildVersion --no-daemon 2>/dev/null)
           echo "value=$VERSION" >> "$GITHUB_OUTPUT"
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2

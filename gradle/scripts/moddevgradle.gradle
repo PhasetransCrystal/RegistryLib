@@ -1,0 +1,96 @@
+test {
+    useJUnitPlatform()
+    testLogging {
+        events 'passed', 'skipped', 'failed'
+        exceptionFormat = 'full'
+    }
+}
+
+// The demo mod is a separate development-only source set: never part of main's
+// jar, sources jar, or publication.
+sourceSets {
+    demo {
+        compileClasspath += sourceSets.main.output
+        runtimeClasspath += sourceSets.main.output
+    }
+}
+
+configurations {
+    demoImplementation.extendsFrom implementation
+    demoCompileOnly.extendsFrom compileOnly
+    demoRuntimeOnly.extendsFrom runtimeOnly
+}
+
+neoForge {
+    version = project.neo_version
+    addModdingDependenciesTo(sourceSets.demo)
+
+    // This line is optional. Access Transformers are automatically detected
+    accessTransformers = project.files('src/main/resources/META-INF/accesstransformer.cfg')
+
+    mods {
+        "${mod_id}" {
+            sourceSet sourceSets.main
+        }
+        registrylibdemo {
+            sourceSet sourceSets.demo
+        }
+    }
+
+    runs {
+        client {
+            client()
+            gameDirectory.set(file('run/client'))
+            systemProperty 'neoforge.enabledGameTestNamespaces', project.mod_id
+        }
+
+        server {
+            server()
+            programArgument '--nogui'
+            gameDirectory.set(file('run/server'))
+            systemProperty 'neoforge.enabledGameTestNamespaces', project.mod_id
+        }
+
+        clientData {
+            clientData()
+            ideName = "clientData"
+            gameDirectory.set(file('run/clientData'))
+            programArguments.addAll('--mod', project.mod_id, '--mod', 'registrylibdemo')
+            programArguments.addAll('--all')
+            programArguments.addAll('--output', file('src/generated/resources/').getAbsolutePath())
+            programArguments.addAll('--existing', file('src/main/resources/').getAbsolutePath())
+            programArguments.addAll('--existing', file('src/demo/resources/').getAbsolutePath())
+        }
+        serverData {
+            serverData()
+            ideName = "serverData"
+            gameDirectory.set(file('run/serverData'))
+            programArguments.addAll('--mod', project.mod_id, '--mod', 'registrylibdemo')
+            programArguments.addAll('--all')
+            programArguments.addAll('--output', file('src/generated/serverResources/').getAbsolutePath())
+            programArguments.addAll('--existing', file('src/main/resources/').getAbsolutePath())
+            programArguments.addAll('--existing', file('src/demo/resources/').getAbsolutePath())
+        }
+
+        gameTestServer {
+            type = "gameTestServer"
+            gameDirectory.set(file('run/gameTestServer'))
+            systemProperty 'neoforge.enabledGameTestNamespaces', project.mod_id
+        }
+
+        configureEach {
+            loadedMods = [project.neoForge.mods.getByName(project.mod_id)]
+            if (name in ['client', 'server', 'gameTestServer', 'clientData', 'serverData']) {
+                loadedMods.add(project.neoForge.mods.getByName('registrylibdemo'))
+            }
+            systemProperty 'forge.logging.markers', 'REGISTRIES'
+            logLevel = org.slf4j.event.Level.INFO
+        }
+    }
+
+    unitTest {
+        enable()
+        testedMod = mods.getByName(mod_id)
+        loadedMods = [mods.getByName(mod_id)]
+    }
+}

@@ -26,15 +26,28 @@ import com.mojang.brigadier.suggestion.Suggestions;
 import com.mojang.brigadier.suggestion.SuggestionsBuilder;
 import com.mojang.serialization.JsonOps;
 
+import java.lang.reflect.Method;
 import java.util.Collection;
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 
+import javax.annotation.Nullable;
+
 public final class StateDebugCommands {
 
     private static final DynamicCommandExceptionType INVALID_VALUE = new DynamicCommandExceptionType(value -> Component.literal(String.valueOf(value)));
+
+    private static final Method HAS_PERMISSION = findHasPermission();
+
+    private static Method findHasPermission() {
+        try {
+            return CommandSourceStack.class.getMethod("hasPermission", int.class);
+        } catch (NoSuchMethodException exception) {
+            return null;
+        }
+    }
 
     private StateDebugCommands() {}
 
@@ -126,36 +139,36 @@ public final class StateDebugCommands {
         return 1;
     }
 
-    private static <T> int setWorldState(CommandContext<CommandSourceStack> context)
-                                                                                     throws CommandSyntaxException {
-        StateEntry<T> entry = requireTypedState(context, StateScope.WORLD);
-        requireWrite(context, entry);
-        T value = parseValue(StringArgumentType.getString(context, "tail"), entry);
-        ((WorldStateEntry<T>) entry).set(context.getSource().getLevel(), value);
-        context.getSource().sendSuccess(() -> Component.literal("Set " + entry.identifier()), true);
-        return 1;
-    }
-
-    private static <T> int setChunkState(CommandContext<CommandSourceStack> context)
-                                                                                     throws CommandSyntaxException {
-        StateEntry<T> entry = requireTypedState(context, StateScope.CHUNK);
-        requireWrite(context, entry);
-        ChunkSetInput input = parseChunkSetInput(context);
-        T value = parseValue(input.value(), entry);
-        ((ChunkStateEntry<T>) entry).set(context.getSource().getLevel(), input.pos(), value);
-        context.getSource().sendSuccess(() -> Component.literal("Set " + entry.identifier()), true);
-        return 1;
-    }
-
     private static int setState(CommandContext<CommandSourceStack> context)
                                                                             throws CommandSyntaxException {
-        Identifier id = getId(context, "id");
-        String raw = getRawId(context, "id");
+        StateEntry<?> entry = requireState(context, null, true);
+        requireWrite(context, entry);
         String tail = StringArgumentType.getString(context, "tail");
-        if (canParseChunkSetInput(tail) && findUniqueState(context, StateScope.CHUNK, true).isPresent()) {
-            return setChunkState(context);
+        if (entry.scope() == StateScope.CHUNK) {
+            setChunkValue(context, entry, parseChunkSetInput(tail));
+        } else {
+            setWorldValue(context, entry, tail);
         }
-        return setWorldState(context);
+        context.getSource().sendSuccess(() -> Component.literal("Set " + entry.identifier()), true);
+        return 1;
+    }
+
+    @SuppressWarnings({ "rawtypes", "unchecked" })
+    private static void setWorldValue(
+                                      CommandContext<CommandSourceStack> context,
+                                      StateEntry<?> entry,
+                                      String raw) throws CommandSyntaxException {
+        Object value = parseValue(raw, (StateEntry) entry);
+        ((WorldStateEntry) entry).set(context.getSource().getLevel(), value);
+    }
+
+    @SuppressWarnings({ "rawtypes", "unchecked" })
+    private static void setChunkValue(
+                                      CommandContext<CommandSourceStack> context,
+                                      StateEntry<?> entry,
+                                      ChunkSetInput input) throws CommandSyntaxException {
+        Object value = parseValue(input.value(), (StateEntry) entry);
+        ((ChunkStateEntry) entry).set(context.getSource().getLevel(), input.pos(), value);
     }
 
     private static int debugWorldState(CommandContext<CommandSourceStack> context)
@@ -227,32 +240,33 @@ public final class StateDebugCommands {
     }
 
     private static boolean hasPermission(CommandSourceStack source, int permission) {
-        try {
-            return (Boolean) CommandSourceStack.class.getMethod("hasPermission", int.class).invoke(source, permission);
-        } catch (ReflectiveOperationException exception) {
-            return switch (permission) {
-                case 0 -> true;
-                case 1 -> source.permissions().hasPermission(Permissions.COMMANDS_MODERATOR);
-                case 2 -> source.permissions().hasPermission(Permissions.COMMANDS_GAMEMASTER);
-                case 3 -> source.permissions().hasPermission(Permissions.COMMANDS_ADMIN);
-                default -> source.permissions().hasPermission(Permissions.COMMANDS_OWNER);
-            };
+        if (HAS_PERMISSION != null) {
+            try {
+                return (Boolean) HAS_PERMISSION.invoke(source, permission);
+            } catch (ReflectiveOperationException exception) {
+                throw new IllegalStateException("Failed to check command permission", exception);
+            }
         }
+        return switch (permission) {
+            case 0 -> true;
+            case 1 -> source.permissions().hasPermission(Permissions.COMMANDS_MODERATOR);
+            case 2 -> source.permissions().hasPermission(Permissions.COMMANDS_GAMEMASTER);
+            case 3 -> source.permissions().hasPermission(Permissions.COMMANDS_ADMIN);
+            case 4 -> source.permissions().hasPermission(Permissions.COMMANDS_OWNER);
+            default -> throw new IllegalArgumentException("Permission must be between 0 and 4: " + permission);
+        };
     }
 
     @SuppressWarnings("unchecked")
-    private static <T> StateEntry<T> requireTypedState(
-                                                       CommandContext<CommandSourceStack> context, StateScope scope) throws CommandSyntaxException {
-        return (StateEntry<T>) requireState(context, scope, true);
-    }
-
     private static StateEntry<?> requireState(
-                                              CommandContext<CommandSourceStack> context, StateScope scope, boolean writable)
-                                                                                                                              throws CommandSyntaxException {
+                                              CommandContext<CommandSourceStack> context,
+                                              @Nullable StateScope scope,
+                                              boolean writable)
+                                                                throws CommandSyntaxException {
         Identifier id = getId(context, "id");
         String raw = getRawId(context, "id");
         Optional<StateEntry<?>> entry = findUniqueState(context, scope, writable);
-        if (entry.isEmpty() || entry.get().scope() != scope || (writable && !entry.get().debugConfig().writable())) {
+        if (entry.isEmpty() || (scope != null && entry.get().scope() != scope) || (writable && !entry.get().debugConfig().writable())) {
             throw CommandSyntaxException.BUILT_IN_EXCEPTIONS
                     .dispatcherParseException()
                     .create("Unknown state: " + raw);
@@ -267,8 +281,10 @@ public final class StateDebugCommands {
     }
 
     private static Optional<StateEntry<?>> findUniqueState(
-                                                           CommandContext<CommandSourceStack> context, StateScope scope, boolean writable)
-                                                                                                                                           throws CommandSyntaxException {
+                                                           CommandContext<CommandSourceStack> context,
+                                                           @Nullable StateScope scope,
+                                                           boolean writable)
+                                                                             throws CommandSyntaxException {
         Identifier id = getId(context, "id");
         String raw = getRawId(context, "id");
         List<StateEntry<?>> matches = matchingStates(context.getSource(), id, raw, scope, writable);
@@ -284,28 +300,14 @@ public final class StateDebugCommands {
                                                       CommandSourceStack source,
                                                       Identifier id,
                                                       String raw,
-                                                      StateScope scope,
+                                                      @Nullable StateScope scope,
                                                       boolean writable) {
         return allStates().stream()
-                .filter(e -> e.scope() == scope)
+                .filter(e -> scope == null || e.scope() == scope)
                 .filter(e -> writable ? canWrite(source, e) : canRead(source, e))
                 .filter(
                         e -> e.identifier().equals(id) || (!raw.contains(":") && e.identifier().getPath().equals(raw)))
                 .toList();
-    }
-
-    private static boolean canParseChunkSetInput(String tail) {
-        try {
-            parseChunkSetInput(tail);
-            return true;
-        } catch (CommandSyntaxException exception) {
-            return false;
-        }
-    }
-
-    private static ChunkSetInput parseChunkSetInput(CommandContext<CommandSourceStack> context)
-                                                                                                throws CommandSyntaxException {
-        return parseChunkSetInput(StringArgumentType.getString(context, "tail"));
     }
 
     private static ChunkSetInput parseChunkSetInput(String tail) throws CommandSyntaxException {

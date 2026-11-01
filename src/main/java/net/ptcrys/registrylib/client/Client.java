@@ -329,7 +329,7 @@ public class Client {
             if (nh <= 0) nh = DEFAULT_LINE_HEIGHT;
             contentHeight += nh;
         }
-        return RegistryLibClientPanelComponent.TOP_MARGIN + RegistryLibClientPanelComponent.INSET * 2 + contentHeight;
+        return RegistryLibClientPanelComponent.TOP_MARGIN + panel.rootNode().getPadding() * 2 + contentHeight;
     }
 
     /**

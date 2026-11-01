@@ -116,15 +116,19 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
 public class RegistryCore {
 
-    private static final ConcurrentSkipListSet<RegistryCore> REGISTRY_CORES = new ConcurrentSkipListSet<>(
-            Comparator.comparingInt(RegistryCore::priority).thenComparing(RegistryCore::getModid));
+    private static final Set<RegistryCore> REGISTRY_CORES = ConcurrentHashMap.newKeySet();
+
+    private static List<RegistryCore> orderedCores() {
+        return REGISTRY_CORES.stream()
+                .sorted(Comparator.comparingInt(RegistryCore::priority).thenComparing(RegistryCore::getModid))
+                .toList();
+    }
 
     private static final ConcurrentHashMap<String, RegistryCore> CORES_BY_MODID = new ConcurrentHashMap<>();
     // Provider names are global; their default locale identities must be global too.
@@ -141,6 +145,7 @@ public class RegistryCore {
     // RegisterEvent is global, so a Core created after an event must see its phase too.
     private static final Set<ResourceKey<? extends Registry<?>>> CLOSED_ENTRY_REGISTRIES = ConcurrentHashMap.newKeySet();
     private static final Set<ResourceKey<? extends Registry<?>>> COMPLETED_REGISTRIES = ConcurrentHashMap.newKeySet();
+    private static final Set<ResourceKey<CreativeModeTab>> CLOSED_CREATIVE_TABS = ConcurrentHashMap.newKeySet();
     private final RegistrationPipeline pipeline;
 
     private static final class RegistrationPipeline {
@@ -177,11 +182,9 @@ public class RegistryCore {
         this.pipeline = PIPELINES.computeIfAbsent(modid, key -> new RegistrationPipeline());
         // The first Core dispatches events for the shared pipeline exactly once.
         if (CORES_BY_MODID.putIfAbsent(modid, this) == null) {
-            if (doDatagen()) {
-                ModList.get()
-                        .getModContainerById(modid)
-                        .ifPresent(c -> c.getEventBus().addListener(this::onGatherData));
-            }
+            ModList.get()
+                    .getModContainerById(modid)
+                    .ifPresent(c -> c.getEventBus().addListener(this::onGatherData));
             REGISTRY_CORES.add(this);
         }
     }
@@ -532,7 +535,7 @@ public class RegistryCore {
     }
 
     public static Collection<RegistryCore> getRegistryCores() {
-        return Collections.unmodifiableCollection(REGISTRY_CORES);
+        return orderedCores();
     }
 
     protected <T extends Item, P, B extends ItemBuilder<T, P>> B applyItemDefaults(B builder) {
@@ -555,6 +558,10 @@ public class RegistryCore {
                                       ResourceKey<CreativeModeTab> creativeModeTab, Consumer<CreativeModeTabModifier> modifier) {
         if (creativeModeTab == CreativeModeTabs.SEARCH)
             throw new RuntimeException("SEARCH is a reserved tab name");
+        if (CLOSED_CREATIVE_TABS.contains(creativeModeTab)) {
+            throw new IllegalStateException(
+                    "Cannot modify creative tab after its contents event has run: " + creativeModeTab.identifier());
+        }
         pipeline.creativeModeTabModifiers.put(creativeModeTab, modifier);
     }
 
@@ -1454,7 +1461,7 @@ public class RegistryCore {
         var type = event.getRegistry();
         var key = type.key();
         CLOSED_ENTRY_REGISTRIES.add(key);
-        REGISTRY_CORES.forEach(
+        orderedCores().forEach(
                 core -> core.pipeline.registrations
                         .remove(key)
                         .forEach(
@@ -1475,15 +1482,16 @@ public class RegistryCore {
     static void onRegisterLate(RegisterEvent event) {
         var type = event.getRegistryKey();
         COMPLETED_REGISTRIES.add(type);
-        REGISTRY_CORES.forEach(
+        orderedCores().forEach(
                 core -> {
                     core.pipeline.afterRegisterCallbacks.remove(type).forEach(Runnable::run);
                 });
     }
 
     static void onBuildCreativeModeTabContents(BuildCreativeModeTabContentsEvent event) {
+        CLOSED_CREATIVE_TABS.add(event.getTabKey());
         var modifier = new CreativeModeTabModifier(event);
-        REGISTRY_CORES.forEach(
+        orderedCores().forEach(
                 core -> core.pipeline.creativeModeTabModifiers
                         .get(event.getTabKey())
                         .forEach(value -> value.accept(modifier)));
@@ -1491,7 +1499,7 @@ public class RegistryCore {
 
     @SuppressWarnings("unchecked")
     static void onEntityAttributeCreation(EntityAttributeCreationEvent event) {
-        REGISTRY_CORES.forEach(
+        orderedCores().forEach(
                 core -> {
                     core.pipeline.entityAttributes.consume(
                             pair -> {
@@ -1505,10 +1513,11 @@ public class RegistryCore {
     }
 
     static void onRegisterSpawnPlacements(RegisterSpawnPlacementsEvent event) {
-        REGISTRY_CORES.forEach(core -> core.pipeline.spawnPlacements.consume(action -> action.accept(event)));
+        orderedCores().forEach(core -> core.pipeline.spawnPlacements.consume(action -> action.accept(event)));
     }
 
     private void onGatherData(GatherDataEvent.Client event) {
+        if (!doDatagen()) return;
         for (GeneratorType<?> type : pipeline.dataGens.getMap().keySet()) {
             if (type instanceof ProviderType<?> && RegistryLibDataProvider.getTypeName(type) == null) {
                 throw new IllegalStateException("No registered provider for datagen callbacks in " + modid + ": " + type);
