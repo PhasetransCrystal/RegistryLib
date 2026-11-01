@@ -19,7 +19,9 @@ def day = buildDate.date
 def pinnedVersion = providers.gradleProperty('buildVersion').orNull
 def dynamicVersion
 if (pinnedVersion != null) {
-    def versionPattern = isRelease ? /[0-9]+(?:\.[0-9]+){5}/ : /[0-9]+\.[0-9]+\.[0-9]+-SNAPSHOT/
+    def versionPattern = isRelease
+            ? /[0-9]+(?:\.[0-9]+)+-[0-9]+(?:\.[0-9]+){4}/
+            : /[0-9]+(?:\.[0-9]+)+-[0-9]+(?:\.[0-9]+)?-SNAPSHOT/
     if (!(pinnedVersion ==~ versionPattern)) {
         throw new GradleException('buildVersion does not match the release or SNAPSHOT version format')
     }

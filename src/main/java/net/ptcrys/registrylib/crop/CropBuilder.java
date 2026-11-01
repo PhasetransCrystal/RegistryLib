@@ -2,6 +2,7 @@ package net.ptcrys.registrylib.crop;
 
 import net.ptcrys.registrylib.RegistryCore;
 import net.ptcrys.registrylib.annotations.StandardAPI;
+import net.ptcrys.registrylib.builders.ItemBuilder;
 import net.ptcrys.registrylib.datagen.loot.RegistryLibBlockLootTables;
 import net.ptcrys.registrylib.util.TextureRef;
 import net.ptcrys.registrylib.util.entry.BlockEntry;
@@ -14,6 +15,7 @@ import net.minecraft.world.level.block.CropBlock;
 import net.minecraft.world.level.block.state.BlockBehaviour;
 import net.minecraft.world.level.storage.loot.predicates.LootItemBlockStatePropertyCondition;
 
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
@@ -102,15 +104,11 @@ public final class CropBuilder<P> {
             throw new IllegalStateException("Cannot register crop '" + name + "' twice");
         }
         registered = true;
-        @SuppressWarnings("unchecked")
-        BlockEntry<RegistryLibCropBlock>[] cropRef = new BlockEntry[1];
-        net.ptcrys.registrylib.builders.ItemBuilder<BlockItem, RegistryCore> seedBuilder = core.item(name + "_seeds", p -> new RegistryLibCropSeedsItem(() -> cropRef[0].get(), p));
-        seedConfig.accept(seedBuilder);
-        seedEntry = seedBuilder.register();
+        AtomicReference<ItemEntry<? extends Item>> seedRef = new AtomicReference<>();
         BlockEntry<RegistryLibCropBlock> crop = core.block(
                 name,
                 p -> new RegistryLibCropBlock(
-                        p, seedEntry, growthRoll, harvestCallback, rightClickHarvest))
+                        p, () -> seedRef.get().get(), growthRoll, harvestCallback, rightClickHarvest))
                 .properties(properties)
                 .blockstate(
                         () -> (block, prov) -> {
@@ -120,7 +118,12 @@ public final class CropBuilder<P> {
                         })
                 .loot((tables, block) -> generateLoot(tables, block))
                 .register();
-        cropRef[0] = crop;
+        ItemBuilder<BlockItem, RegistryCore> seedBuilder = core.item(
+                name + "_seeds",
+                p -> new RegistryLibCropSeedsItem(() -> crop.get(), p));
+        seedConfig.accept(seedBuilder);
+        seedEntry = seedBuilder.register();
+        seedRef.set(seedEntry);
         return crop;
     }
 
