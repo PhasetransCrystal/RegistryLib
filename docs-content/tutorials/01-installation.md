@@ -10,7 +10,7 @@ This page walks you through dependency setup and local validation so you can sta
 
 ## Prerequisites
 
-- A working NeoForge mod project (Minecraft 26.1.2, NeoForge 26.1.2.71)
+- A working NeoForge mod project (Minecraft 26.1.2, NeoForge 26.1.2.107)
 - Gradle 9.6.1 with a Java 25 toolchain
 
 ## Step 1: Add the Maven Repository
