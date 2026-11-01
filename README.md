@@ -24,8 +24,8 @@ For setup instructions, usage guides, and examples for this fork, choose the doc
 
 This is the primary place to learn how to use RegistryLib.
 
-- **Minecraft**: 26.1.2
-- **NeoForge**: 26.1.2.125
+- **Minecraft**: 26.2
+- **NeoForge**: 26.2.0.93
 - **Gradle**: 9.6.1 (included wrapper)
 - **Java**: 25
 

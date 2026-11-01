@@ -6,7 +6,7 @@ import net.ptcrys.registrylib.util.entry.BlockEntry;
 import net.ptcrys.registrylibdemo.RegistryLibDemo;
 import net.ptcrys.registrylibdemo.state.SimpleStateExample;
 
-import net.minecraft.advancements.criterion.StatePropertiesPredicate;
+import net.minecraft.advancements.predicates.StatePropertiesPredicate;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.block.CropBlock;
 import net.minecraft.world.level.block.SoundType;

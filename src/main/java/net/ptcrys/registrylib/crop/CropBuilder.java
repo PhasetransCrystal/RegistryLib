@@ -8,7 +8,7 @@ import net.ptcrys.registrylib.util.TextureRef;
 import net.ptcrys.registrylib.util.entry.BlockEntry;
 import net.ptcrys.registrylib.util.entry.ItemEntry;
 
-import net.minecraft.advancements.criterion.StatePropertiesPredicate;
+import net.minecraft.advancements.predicates.StatePropertiesPredicate;
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.level.block.CropBlock;

@@ -109,7 +109,7 @@ public class FullRecipeExample {
                         DifferenceIngredient.of(
                                 Ingredient.of(
                                         registries.lookupOrThrow(Registries.ITEM).getOrThrow(ItemTags.WOOL)),
-                                Ingredient.of(Items.WHITE_WOOL)),
+                                Ingredient.of(Items.WOOL.white())),
                         new ItemStackTemplate(Items.STRING, 2),
                         40,
                         8.0F,

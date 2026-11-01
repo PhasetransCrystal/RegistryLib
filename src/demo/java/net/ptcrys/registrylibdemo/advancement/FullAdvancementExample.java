@@ -9,7 +9,7 @@ import net.ptcrys.registrylibdemo.item.SimpleItemExample;
 import net.minecraft.advancements.Advancement;
 import net.minecraft.advancements.AdvancementHolder;
 import net.minecraft.advancements.AdvancementType;
-import net.minecraft.advancements.criterion.InventoryChangeTrigger;
+import net.minecraft.advancements.triggers.InventoryChangeTrigger;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.Items;
 
