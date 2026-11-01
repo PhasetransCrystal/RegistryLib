@@ -18,14 +18,8 @@ dependencyResolutionManagement {
             version("modDevGradleLegacy", "2.0.140")
             plugin("modDevGradleLegacy", "net.neoforged.moddev").versionRef("modDevGradleLegacy")
 
-            version("kotlinDevGradleLegacy", "2.3.0")
-            plugin("kotlinDevGradleLegacy", "org.jetbrains.kotlin.jvm").versionRef("kotlinDevGradleLegacy")
-
             version("lombokLegacy", "9.2.0")
             plugin("lombokLegacy", "io.freefair.lombok").versionRef("lombokLegacy")
-
-            version("kotlinLombokLegacy", "2.1.20")
-            plugin("kotlinLombokLegacy", "org.jetbrains.kotlin.plugin.lombok").versionRef("kotlinLombokLegacy")
 
             version("spotless", "8.0.0")
             version("jetbrains-annotations", "26.0.2")

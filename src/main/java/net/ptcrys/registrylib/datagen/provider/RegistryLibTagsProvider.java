@@ -36,6 +36,7 @@ public interface RegistryLibTagsProvider<T> extends RegistryLibLookupFillerProvi
         private final RegistryCore owner;
         private final ProviderType<? extends IntrinsicImpl<T>> type;
         private final String name;
+        private CompletableFuture<HolderLookup.Provider> contentsProvider;
 
         public IntrinsicImpl(
                              RegistryCore owner,
@@ -75,6 +76,14 @@ public interface RegistryLibTagsProvider<T> extends RegistryLibLookupFillerProvi
         @Override
         public TagAppender<T, T> tag(TagKey<T> key) {
             return super.tag(key);
+        }
+
+        @Override
+        protected CompletableFuture<HolderLookup.Provider> createContentsProvider() {
+            if (contentsProvider == null) {
+                contentsProvider = super.createContentsProvider();
+            }
+            return contentsProvider;
         }
 
         @Override

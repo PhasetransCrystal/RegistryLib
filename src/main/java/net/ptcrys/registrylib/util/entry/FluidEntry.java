@@ -23,14 +23,13 @@ public class FluidEntry<T extends BaseFlowingFluid> extends AbstractHolderEntry<
     private FluidStack readOnlyStack;
 
     public FluidEntry(RegistryCore owner, ResourceKey<Fluid> key) {
+        this(owner, key, key.identifier().getPath());
+    }
+
+    public FluidEntry(RegistryCore owner, ResourceKey<Fluid> key, String blockName) {
         super(key);
-        BlockEntry<? extends Block> block = null;
-        try {
-            block = BlockEntry.cast(getSibling(owner, BuiltInRegistries.BLOCK));
-        } catch (IllegalArgumentException e) {
-            // No block sibling
-        }
-        this.block = block;
+        RegistryEntry<?, ?> sibling = owner.get(blockName, BuiltInRegistries.BLOCK.key());
+        this.block = sibling instanceof BlockEntry<?> blockEntry ? blockEntry : null;
     }
 
     @Override

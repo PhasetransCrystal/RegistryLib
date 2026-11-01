@@ -149,7 +149,7 @@ The custom ingredient serializes with a `neoforge:ingredient_type` discriminator
 ```json
 {
   "ingredient": {
-    "neoforge:ingredient_type": "registrylibtest:min_durability",
+    "neoforge:ingredient_type": "registrylibdemo:min_durability",
     "tag": "minecraft:swords",
     "min_durability": 200
   },

@@ -3,7 +3,6 @@ package net.ptcrys.registrylib.util.registry;
 import lombok.Getter;
 import org.jspecify.annotations.NonNull;
 
-import java.security.ProtectionDomain;
 import java.util.Iterator;
 import java.util.Spliterator;
 import java.util.function.Consumer;
@@ -12,23 +11,10 @@ import java.util.stream.StreamSupport;
 
 public abstract class AbstractRegistry<E> implements Iterable<E> {
 
-    private static final StackWalker WALKER = StackWalker.getInstance(StackWalker.Option.RETAIN_CLASS_REFERENCE);
-
     @Getter
     private boolean frozen = false;
 
-    private ProtectionDomain creatorLocation;
-
-    protected AbstractRegistry() {
-        WALKER.walk(
-                frames -> {
-                    frames
-                            .skip(2)
-                            .limit(1)
-                            .forEach(frame -> creatorLocation = frame.getDeclaringClass().getProtectionDomain());
-                    return null;
-                });
-    }
+    protected AbstractRegistry() {}
 
     public abstract int size();
 
@@ -47,22 +33,7 @@ public abstract class AbstractRegistry<E> implements Iterable<E> {
     }
 
     public void freeze() {
-        checkCallerIsCreator();
         if (frozen) throw new IllegalStateException("Registry is already frozen!");
         this.frozen = true;
-    }
-
-    private void checkCallerIsCreator() {
-        if (!WALKER.walk(
-                frames -> frames
-                        .skip(2)
-                        .limit(1)
-                        .allMatch(
-                                frame -> {
-                                    var pd = frame.getDeclaringClass().getProtectionDomain();
-                                    return pd == creatorLocation;
-                                }))) {
-            throw new IllegalStateException("Registry can only be frozen by the class that created it!");
-        }
     }
 }

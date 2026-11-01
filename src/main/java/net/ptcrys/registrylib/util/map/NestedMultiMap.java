@@ -9,6 +9,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 
 public interface NestedMultiMap<K1, K2, V> {
 
@@ -74,7 +75,7 @@ public interface NestedMultiMap<K1, K2, V> {
 
         @Override
         public Map<K1, Map<K2, Collection<V>>> getMap() {
-            return map;
+            return Collections.unmodifiableMap(map);
         }
 
         @Override
@@ -82,19 +83,20 @@ public interface NestedMultiMap<K1, K2, V> {
             var innerMap = map.get(k1);
             if (innerMap == null) return Collections.emptyList();
             var values = innerMap.get(k2);
-            if (values != null) return values;
+            if (values != null) return Collections.unmodifiableCollection(values);
             return Collections.emptyList();
         }
 
         @Override
         public Map<K2, Collection<V>> get(K1 k1) {
             var innerMap = map.get(k1);
-            if (innerMap != null) return innerMap;
+            if (innerMap != null) return Collections.unmodifiableMap(innerMap);
             return Collections.emptyMap();
         }
 
         @Override
         public void put(K1 k1, K2 k2, V value) {
+            Objects.requireNonNull(value, "value");
             Map<K2, Collection<V>> innerMap;
             Collection<V> values;
             if (isRefMap) {

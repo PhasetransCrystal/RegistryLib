@@ -25,13 +25,15 @@ public class RegistryLibClientPanelComponent implements ClientTooltipComponent {
     /** 面板上方留白——在面板之间以及面板与内联区域之间产生间距。 */
     static final int TOP_MARGIN = 5;
 
-    /** 背景向内容区左右各延伸的像素数——比原版 PADDING (3) 少 1，视觉上与原版边框对齐。 */
-    static final int INSET = 4;
+    /** 没有绑定 RootNode 的客户端组件使用的默认内边距。 */
+    static final int DEFAULT_INSET = 4;
 
     private final ResolvedRoot resolved;
+    private final int inset;
 
     public RegistryLibClientPanelComponent(RegistryLibPanelComponent component) {
         this.resolved = component.resolved();
+        this.inset = resolved.rootNode().getPadding();
     }
 
     private int contentWidth(Font font) {
@@ -57,7 +59,7 @@ public class RegistryLibClientPanelComponent implements ClientTooltipComponent {
 
     @Override
     public int getHeight(Font font) {
-        return TOP_MARGIN + INSET * 2 + contentHeight(font);
+        return TOP_MARGIN + inset * 2 + contentHeight(font);
     }
 
     @Override
@@ -67,9 +69,9 @@ public class RegistryLibClientPanelComponent implements ClientTooltipComponent {
         resolved
                 .rootNode()
                 .getBoxRenderer()
-                .render(graphics, x - INSET, y + TOP_MARGIN, cw + INSET * 2, ch + INSET * 2);
+                .render(graphics, x - inset, y + TOP_MARGIN, cw + inset * 2, ch + inset * 2);
 
-        int contentY = y + TOP_MARGIN + INSET;
+        int contentY = y + TOP_MARGIN + inset;
         for (SubNode node : resolved.subNodes()) {
             node.extractText(graphics, font, x, contentY);
             contentY += node.getHeight(font);
@@ -80,7 +82,7 @@ public class RegistryLibClientPanelComponent implements ClientTooltipComponent {
     public void extractImage(
                              Font font, int x, int y, int width, int height, GuiGraphicsExtractor graphics) {
         int cw = contentWidth(font);
-        int contentY = y + TOP_MARGIN + INSET;
+        int contentY = y + TOP_MARGIN + inset;
         for (SubNode node : resolved.subNodes()) {
             int nodeHeight = node.getHeight(font);
             node.extractImage(font, x, contentY, cw, nodeHeight, graphics);

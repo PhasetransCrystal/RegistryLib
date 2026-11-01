@@ -172,17 +172,9 @@ The custom Builder factory is part of the contract. If you only add `langCn(...)
 
 ### Step 5: Expose the Subtype Where Java Allows It
 
-The test project overrides the public methods that can return a more specific Builder type safely:
+The test project also overrides the shorthand entry points where Java's type system permits a covariant return type. Blocks do not need an extra override here: the explicit-`parent` `block(...)` override from Step 3 already returns `ModBlockBuilder` directly through `ModBlockBuilder.create(...)`.
 
 ```java
-@Override
-public <T extends Block, P> ModBlockBuilder<T, P> block(
-        P parent,
-        String name,
-        Function<BlockBehaviour.Properties, T> factory) {
-    return (ModBlockBuilder<T, P>) super.block(parent, name, factory);
-}
-
 @Override
 public <T extends Item> ModItemBuilder<T, RegistryCore> item(
         String name,
@@ -201,6 +193,10 @@ public <T extends BaseFlowingFluid, P> ModFluidBuilder<T, P> fluid(
 }
 ```
 
+:::warning
+Do not implement the block override as `(ModBlockBuilder<T, P>) super.block(parent, name, factory)`. The base `RegistryCore.block(...)` constructs a plain `BlockBuilder`, so that cast throws `ClassCastException` at runtime. Use the `ModBlockBuilder.create(...)` form from Step 3 instead. The fluid cast above is safe because `super.fluid(...)` calls the overridden `newFluidBuilder(...)` hook, which returns a `ModFluidBuilder`.
+:::
+
 The important nuance is the one noted in `ModRegistryCore`: Java generic invariance prevents some shorthand forms from being overridden with the exact project-specific subtype you would like. That is why the explicit-`parent` overloads matter for Blocks and Fluids.
 
 ### Step 6: Use the Right Entry Point in Real Code
@@ -208,7 +204,7 @@ The important nuance is the one noted in `ModRegistryCore`: Java generic invaria
 Item chains in the test project can use the short form directly:
 
 ```java
-public static final ItemEntry<Item> COPPER_COIN = RegistryLibTest.REGISTRYLIB
+public static final ItemEntry<Item> COPPER_COIN = RegistryLibDemo.REGISTRYLIB
         .item("copper_coin", Item::new)
         .langCn("Copper Coin (zh_cn)")
         .lang("Copper Coin")
@@ -218,8 +214,8 @@ public static final ItemEntry<Item> COPPER_COIN = RegistryLibTest.REGISTRYLIB
 For Blocks and Fluids, use the explicit-`parent` overload when you want the custom Builder API to remain visible:
 
 ```java
-public static final BlockEntry<Block> DECORATIVE_STONE = RegistryLibTest.REGISTRYLIB
-        .block(RegistryLibTest.REGISTRYLIB, "decorative_stone", Block::new)
+public static final BlockEntry<Block> DECORATIVE_STONE = RegistryLibDemo.REGISTRYLIB
+        .block(RegistryLibDemo.REGISTRYLIB, "decorative_stone", Block::new)
         .langCn("Decorative Stone (zh_cn)")
         .initialProperties(() -> Blocks.STONE)
         .lang("Decorative Stone")
@@ -228,8 +224,8 @@ public static final BlockEntry<Block> DECORATIVE_STONE = RegistryLibTest.REGISTR
 ```
 
 ```java
-public static final FluidEntry<BaseFlowingFluid.Flowing> ACID = RegistryLibTest.REGISTRYLIB
-        .fluid(RegistryLibTest.REGISTRYLIB, "acid", STILL, FLOW, BaseFlowingFluid.Flowing::new)
+public static final FluidEntry<BaseFlowingFluid.Flowing> ACID = RegistryLibDemo.REGISTRYLIB
+        .fluid(RegistryLibDemo.REGISTRYLIB, "acid", STILL, FLOW, BaseFlowingFluid.Flowing::new)
         .langCn("Acid (zh_cn)")
         .lang("Acid")
         .register();

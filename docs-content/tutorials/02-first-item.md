@@ -20,7 +20,7 @@ This tutorial registers two items: a minimal one-liner and a fully configured it
 The shortest path to a working item:
 
 ```java
-public static final ItemEntry<Item> COPPER_COIN = RegistryLibTest.REGISTRYLIB
+public static final ItemEntry<Item> COPPER_COIN = RegistryLibDemo.REGISTRYLIB
         .item("copper_coin", Item::new)
         .langCn("Copper Coin (zh_cn)")
         .lang("Copper Coin")
@@ -39,7 +39,7 @@ That single chain:
 When you need tooltips, creative tabs, tags, and attachments, use `componentItem()`:
 
 ```java
-public static final ItemEntry<ComponentItem> MAGIC_WAND = RegistryLibTest.REGISTRYLIB
+public static final ItemEntry<ComponentItem> MAGIC_WAND = RegistryLibDemo.REGISTRYLIB
         .componentItem("magic_wand")
         .initialProperties(() -> new Item.Properties().stacksTo(1))
         .properties(Item.Properties::fireResistant)

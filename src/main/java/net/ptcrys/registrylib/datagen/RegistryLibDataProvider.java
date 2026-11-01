@@ -14,11 +14,11 @@ import net.neoforged.neoforge.data.event.GatherDataEvent;
 
 import com.google.common.collect.BiMap;
 import com.google.common.collect.HashBiMap;
-import com.google.common.collect.Lists;
 import com.mojang.logging.LogUtils;
 import it.unimi.dsi.fastutil.objects.Reference2ReferenceOpenHashMap;
 import org.slf4j.Logger;
 
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Optional;
@@ -72,14 +72,37 @@ public class RegistryLibDataProvider implements DataProvider {
     public CompletableFuture<?> run(CachedOutput cache) {
         return registriesLookup.thenCompose(
                 provider -> {
-                    var list = Lists.<CompletableFuture<?>>newArrayList();
+                    var pending = new LinkedHashMap<CompletableFuture<?>, String>();
+                    var failures = new ArrayList<String>();
 
                     for (Map.Entry<ProviderType<?>, RegistryLibProvider> e : subProviders.entrySet()) {
-                        LOGGER.debug("Generating data for type: {}", getTypeName(e.getKey()));
-                        list.add(e.getValue().run(cache));
+                        String name = getTypeName(e.getKey());
+                        LOGGER.debug("Generating data for type: {}", name);
+                        try {
+                            pending.put(e.getValue().run(cache), name);
+                        } catch (Exception exception) {
+                            LOGGER.error("Data provider {} failed synchronously", name, exception);
+                            failures.add(name + ": " + exception);
+                        }
                     }
 
-                    return CompletableFuture.allOf(list.toArray(CompletableFuture[]::new));
+                    return CompletableFuture
+                            .allOf(pending.keySet().toArray(CompletableFuture[]::new))
+                            .handle((ignored, throwable) -> {
+                                pending.forEach((future, name) -> {
+                                    if (future.isCompletedExceptionally()) {
+                                        failures.add(name + ": " + future.exceptionNow());
+                                    }
+                                });
+                                if (failures.isEmpty() && throwable != null) {
+                                    failures.add("Data generation: " + throwable);
+                                }
+                                if (!failures.isEmpty()) {
+                                    throw new IllegalStateException(
+                                            "Data generation failed for " + mod + ":\n - " + String.join("\n - ", failures));
+                                }
+                                return null;
+                            });
                 });
     }
 

@@ -8,6 +8,7 @@ import java.util.Collection;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class MultiMapTest {
@@ -159,5 +160,21 @@ class MultiMapTest {
                 "Identity map should treat distinct String instances as separate keys");
         assertEquals(1, map.get(key1).size());
         assertEquals(1, map.get(key2).size());
+    }
+
+    @Test
+    void returnedViewsAreUnmodifiable() {
+        MultiMap<String, Integer> map = MultiMap.create(ArrayList::new);
+        map.put("key", 1);
+
+        assertThrows(UnsupportedOperationException.class, () -> map.get("key").add(2));
+        assertThrows(UnsupportedOperationException.class, () -> map.getMap().clear());
+    }
+
+    @Test
+    void putRejectsNullValue() {
+        MultiMap<String, Integer> map = MultiMap.create(ArrayList::new);
+
+        assertThrows(NullPointerException.class, () -> map.put("key", null));
     }
 }

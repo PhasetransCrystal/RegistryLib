@@ -42,36 +42,6 @@ class StateRegistryManagerTest {
     }
 
     @Test
-    void registerAndGetRoundtrip() {
-        Assumptions.assumeTrue(
-                mcAvailable, "Skipped: StateRegistryManager requires Minecraft runtime classes");
-        // If MC is available, create a real StateEntry and verify register + get.
-        // This test body only executes when the full MC runtime is present.
-    }
-
-    @Test
-    void duplicateIdentifierThrows() {
-        Assumptions.assumeTrue(
-                mcAvailable, "Skipped: StateRegistryManager requires Minecraft runtime classes");
-        // If MC is available, registering two entries with the same identifier should throw.
-    }
-
-    @Test
-    void allReturnsSortedEntries() {
-        Assumptions.assumeTrue(
-                mcAvailable, "Skipped: StateRegistryManager requires Minecraft runtime classes");
-        // If MC is available, all() should return entries sorted by identifier then scope.
-    }
-
-    @Test
-    void getReturnsEmptyForUnregisteredKey() {
-        Assumptions.assumeTrue(
-                mcAvailable, "Skipped: StateRegistryManager requires Minecraft runtime classes");
-        // Even without registering anything, get() should return Optional.empty().
-        // Cannot call get() without a valid Identifier instance, so skip if MC unavailable.
-    }
-
-    @Test
     void allReturnsEmptyCollectionWhenNothingRegistered() {
         Assumptions.assumeTrue(
                 mcAvailable, "Skipped: StateRegistryManager requires Minecraft runtime classes");

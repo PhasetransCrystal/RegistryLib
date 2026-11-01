@@ -1,0 +1,27 @@
+license="Apache-2.0"
+
+[[mods]]
+modId="registrylibdemo"
+version="0.0.0-dev"
+displayName="RegistryLib Demo"
+description='''Local development mod for RegistryLib. Not included in published artifacts.'''
+
+[[dependencies.registrylibdemo]]
+modId="registrylib"
+type="required"
+ordering="AFTER"
+side="BOTH"
+
+[[dependencies.registrylibdemo]]
+modId="neoforge"
+type="required"
+versionRange="[${neo_version},)"
+ordering="NONE"
+side="BOTH"
+
+[[dependencies.registrylibdemo]]
+modId="minecraft"
+type="required"
+versionRange="${minecraft_version_range}"
+ordering="NONE"
+side="BOTH"

@@ -17,7 +17,7 @@ import net.minecraft.network.chat.Component;
 public class RegistryLibClientPageControl implements ClientTooltipComponent {
 
     private static final int TOP_MARGIN = RegistryLibClientPanelComponent.TOP_MARGIN;
-    private static final int INSET = RegistryLibClientPanelComponent.INSET;
+    private static final int INSET = RegistryLibClientPanelComponent.DEFAULT_INSET;
     private static final int PADDING_X = 6;
     private static final int PADDING_Y = 4;
     private static final int MIN_WIDTH = 96;

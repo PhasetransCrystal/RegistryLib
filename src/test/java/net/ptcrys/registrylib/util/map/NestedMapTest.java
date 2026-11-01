@@ -9,6 +9,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class NestedMapTest {
@@ -170,5 +171,21 @@ class NestedMapTest {
 
         assertTrue(map.isEmpty());
         assertNull(map.get("a", "x"));
+    }
+
+    @Test
+    void returnedViewsAreUnmodifiable() {
+        NestedMap<String, String, Integer> map = NestedMap.create(HashMap::new);
+        map.put("outer", "inner", 1);
+
+        assertThrows(UnsupportedOperationException.class, () -> map.get("outer").put("other", 2));
+        assertThrows(UnsupportedOperationException.class, () -> map.getMap().clear());
+    }
+
+    @Test
+    void putRejectsNullValue() {
+        NestedMap<String, String, Integer> map = NestedMap.create(HashMap::new);
+
+        assertThrows(NullPointerException.class, () -> map.put("outer", "inner", null));
     }
 }

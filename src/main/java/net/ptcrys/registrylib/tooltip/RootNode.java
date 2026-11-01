@@ -61,6 +61,9 @@ public class RootNode {
         this.id = id;
         this.priority = priority;
         this.separateBox = separateBox;
+        if (padding < 0) {
+            throw new IllegalArgumentException("Tooltip padding must be >= 0: " + padding);
+        }
         this.padding = padding;
         this.boxRenderer = boxRenderer;
     }

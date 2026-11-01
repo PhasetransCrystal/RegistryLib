@@ -6,7 +6,7 @@ description: Complete method reference for all Builder types.
 
 # Builder Methods
 
-Complete method reference for all RegistryLib builder types. Each builder is created from an entry point on the `RegistryLib` instance and terminated with `.register()`.
+Complete method reference for all RegistryLib builder types. Each builder is created from an entry point on the `RegistryCore` instance and terminated with `.register()`.
 
 :::note
 All configuration methods return `this` for fluent chaining. Order generally does not matter, but `initialProperties` should come before `properties` when both are used.
@@ -14,6 +14,8 @@ All configuration methods return `this` for fluent chaining. Order generally doe
 
 :::warning
 All builders have a double-registration guard: calling `register()` twice on the same builder instance throws `IllegalStateException`. This applies to `AbstractBuilder` subclasses (ItemBuilder, BlockBuilder, FluidBuilder, BlockEntityBuilder, EntityBuilder) as well as standalone builders (EnchantmentBuilder, RecipeTypeBuilder, CropBuilder, WorldgenFeatureBuilder, ChunkStateBuilder, WorldStateBuilder).
+
+For `RecipeTypeBuilder`, configure `.serializer(codec, streamCodec)` before `.register()`. A missing serializer ends that builder's registration attempt; correcting the configuration requires a new builder instance.
 :::
 
 ## ItemBuilder
@@ -45,7 +47,7 @@ Created via `item("id", factory)`, `item("id")`, or `componentItem("id")`.
 | `addTag(tags...)` | `TagKey<Item>...` | Add item tags |
 | `addRecipeData(callback)` | `Consumer<RegistryLibRecipeProvider>` | Add a typed recipe datagen callback |
 | `addTooltip(component)` | `Component` | Add a simple static tooltip line |
-| `addTooltip(collector)` | `BiConsumer<TooltipNodeCollector, ItemStack>` | Add a dynamic tooltip with context |
+| `addTooltip(config)` | `TooltipNodeCollector.TooltipConfig` | Add a dynamic tooltip with context |
 | `attach(attachment)` | `ItemAttachment` | Add an attachment (ComponentItem only) |
 | `texture(supplier)` | `Supplier<BufferedImage>` | Generate a texture during datagen |
 | `register()` | - | Submit and return `ItemEntry<T>` |
@@ -57,7 +59,7 @@ REGISTRYLIB.item("copper_coin", Item::new)
         .initialProperties(() -> new Item.Properties().stacksTo(64))
         .lang("Copper Coin")
         .defaultModel()
-        .addTab(CreativeModeTabs.MISC)
+        .addTab(CreativeModeTabs.INGREDIENTS)
         .addTooltip(Component.literal("A shiny coin"))
         .register();
 ```
@@ -77,7 +79,7 @@ Created via `block("id", factory)` or `block("id")`.
 | `simpleItem()` | - | Create a default BlockItem with no customization |
 | `item(configurator)` | `Consumer<ItemBuilder>` | Create and customize the associated BlockItem |
 | `defaultLoot()` | - | Generate basic self-drop loot table |
-| `loot(configurator)` | `BiConsumer<BlockLootSubProvider, Block>` | Define a custom loot table |
+| `loot(configurator)` | `BiConsumer<RegistryLibBlockLootTables, T>` | Define a custom loot table |
 | `tintedCube(tintIndex)` | `int` | Generate a simple cube block model using the block's own texture path |
 | `tintedCube(texturePath, tintIndex)` | `String, int` | Generate a tinted cube block model referencing a shared texture |
 | `tintedCube(texture, tintIndex)` | `TextureRef/Identifier, int` | Type-safe shared texture variants |
@@ -85,7 +87,7 @@ Created via `block("id", factory)` or `block("id")`.
 | `constantTint(texturePath, color)` | `String, RgbColor` | Generate a shared-texture tinted cube, register block tint, and generate a tinted BlockItem model |
 | `constantTint(texture, color)` | `TextureRef, RgbColor` | Type-safe variant of the shared texture overload |
 | `tintSource(sources...)` | `ItemTintSource...` | Generate a BlockItem model with custom item tint sources |
-| `blockTintSource(sources...)` | `BlockTintSource...` | Register runtime block/world tint sources |
+| `blockTintSource(supplier)` | `Supplier<Supplier<BlockTintSource[]>>` | Register runtime block/world tint sources |
 | `blockConstantTint(color)` | `RgbColor` or `ArgbColor` | Register a constant block tint source; RGB is converted to opaque ARGB |
 | `layeredCube(particle, layers...)` | `TextureRef, BlockModelLayer...` | Generate a layered full-cube model with per-layer `tintindex` and translucency settings |
 | `debugTint()` | - | Log model tint indices, tint source counts, colors, and warnings |
@@ -135,7 +137,7 @@ Created via `crop("id")`.
 | `growthRoll(callback)` | `RegistryLibCropBlock.GrowthRoll` | Decide whether a random tick may advance growth |
 | `onHarvest(callback)` | `RegistryLibCropBlock.HarvestCallback` | Run server harvest logic before right-click replanting |
 | `rightClickHarvest(enabled)` | `boolean` | Enable or disable mature right-click harvest |
-| `seedItem(configurator)` | `Consumer<ItemBuilder<Item, RegistryCore>>` | Configure the generated seed item |
+| `seedItem(configurator)` | `Consumer<ItemBuilder<BlockItem, RegistryCore>>` | Configure the generated seed item |
 | `produce(supplier)` | `Supplier<? extends Item>` | Configure mature crop loot |
 | `stageTextures(textures...)` | `TextureRef...` | Generate crop stage blockstate/model data |
 | `register()` | - | Register crop block and seed item, returning `BlockEntry<RegistryLibCropBlock>` |
@@ -170,7 +172,6 @@ Created via `worldState("id", codec, defaultValue)`.
 
 | Method | Parameters | Description |
 | --- | --- | --- |
-| `syncOnModify(enabled)` | `boolean` | Request sync after `set` or `modify` when a sync codec exists |
 | `sync(streamCodec)` | `StreamCodec<? super RegistryFriendlyByteBuf, T>` | Configure sync and enable sync-on-modify |
 | `debug()` | - | Enable read-only debug commands with default permissions |
 | `debug(configurator)` | `UnaryOperator<StateDebugConfig>` | Enable and configure debug command permissions and writability |
@@ -199,8 +200,8 @@ Created via `fluid("id", still, flow)`.
 | `lang(text)` | `String` | Set English display name |
 | `lang(providerType, text)` | `ProviderType, String` | Set locale-specific display name |
 | `lang(localeToName)` | `Map<String, String>` | Set display names for multiple locales at once |
-| `clientExtension(still, flow)` | `ResourceLocation, ResourceLocation` | Client rendering with colored textures |
-| `clientExtension(still, flow, tint)` | `ResourceLocation, ResourceLocation, int` | Client rendering with grayscale textures and tint color |
+| `clientExtension(still, flow)` | `Identifier, Identifier` | Register fluid render textures without a custom tint |
+| `clientExtension(still, flow, tint)` | `Identifier, Identifier, int` | Register fluid render textures with a tint color |
 | `tag(tags...)` | `TagKey<Fluid>...` | Add fluid tags |
 | `block(configurator)` | `Consumer<BlockBuilder>` | Generate a fluid block |
 | `bucket(configurator)` | `Consumer<ItemBuilder>` | Generate a bucket item |
@@ -232,7 +233,7 @@ Created via `blockEntity("id", factory)`.
 | --- | --- | --- |
 | `validBlock(entry)` | `BlockEntry` | Bind a single host block |
 | `validBlocks(entries...)` | `BlockEntry...` | Bind multiple host blocks |
-| `renderer(supplier)` | `Supplier<BlockEntityRendererFactory>` | Register a renderer (lazy, client-side only) |
+| `renderer(supplier)` | `Supplier<Supplier<? extends BlockEntityRendererProvider>>` | Register a renderer (lazy, client-side only) |
 | `register()` | - | Submit and return `BlockEntityTypeEntry<T>` |
 
 **Example:**
@@ -262,7 +263,7 @@ Created via `entity("id", factory, category)`.
 | `noSummon()` | - | Prevent `/summon` command from spawning this entity |
 | `noSave()` | - | Exclude entity from world save data |
 | `attributes(supplier)` | `Supplier<AttributeSupplier.Builder>` | Register entity attributes (required for LivingEntity) |
-| `renderer(supplier)` | `Supplier<EntityRendererProvider>` | Register client-side renderer (lazy, client-only) |
+| `renderer(supplier)` | `Supplier<Supplier<EntityRendererProvider>>` | Register client-side renderer (lazy, client-only) |
 | `spawnEgg()` | - | Create a default spawn egg item |
 | `spawnEgg(consumer)` | `Consumer<ItemBuilder>` | Create and customize the spawn egg item |
 | `lang(text)` | `String` | Set English display name |
@@ -281,7 +282,7 @@ Created via `entity("id", factory, category)`.
 
 ## RegistryCore addRecipe Entry Points
 
-These are convenience methods on `RegistryCore` (your `RegistryLib` instance). They add recipes to any recipe type (vanilla, NeoForge, or third-party) without registering a new `RecipeType`.
+These are convenience methods on your `RegistryCore` instance. They add recipes to any recipe type (vanilla, NeoForge, or third-party) without registering a new `RecipeType`.
 
 | Method | Parameters | Description |
 | --- | --- | --- |

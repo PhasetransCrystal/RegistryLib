@@ -140,9 +140,9 @@ public final class WorldStateBuilder<T, P>
 
 `AbstractStateBuilder` extracts shared fields (core, parent, name, codec, sync codec, debug config) and shared methods (sync, debug, the `register()`/`build()` guard) so that `ChunkStateBuilder` and `WorldStateBuilder` only add scope-specific logic. This is the same CRTP self-type trick as `AbstractBuilder<R, T, P, S>`, applied to a different part of the library.
 
-## The BuilderCallback Mechanism
+## Submitting a Builder
 
-When `.register()` is called on a builder, it delegates to a `BuilderCallback`:
+For `AbstractBuilder` subclasses, `.register()` collects callbacks and submits the entry through `core.registry(...)`:
 
 ```java
 public RegistryEntry<R, T> register() {
@@ -157,10 +157,10 @@ public RegistryEntry<R, T> register() {
 Calling `.register()` (or `.build()`) more than once on the same builder throws `IllegalStateException`. Each builder instance is single-use. This guard exists on all builder families: `AbstractBuilder`, `AbstractStateBuilder`, `EnchantmentBuilder`, `RecipeTypeBuilder`, `CropBuilder`, and `WorldgenFeatureBuilder`.
 :::
 
-The registration:
-1. Creates a `Registration` record storing the builder, creator function, and entry factory
-2. Stores it in an internal table indexed by registry type and name
-3. Returns a `RegistryEntry<R, T>` that lazily resolves when NeoForge registers objects
+The submission:
+1. Creates a `Registration` holding the registry key, creator function, callbacks, and an entry produced by the entry factory
+2. Adds it to the pending queue and indexes the entry by registry type and name
+3. Returns the entry; the registration event later creates and binds its value
 
 This indirection is what allows RegistryLib to batch all registrations and execute them at the right time.
 

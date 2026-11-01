@@ -198,6 +198,10 @@ public class EntityBuilder<T extends Entity, P>
         final int capturedWeight = weight;
         final int capturedMin = minCount;
         final int capturedMax = maxCount;
+        var key = ResourceKey.create(
+                NeoForgeRegistries.Keys.BIOME_MODIFIERS,
+                Identifier.fromNamespaceAndPath(core.getModid(), name + "_spawn"));
+        core.getDataGenInitializer().reserve(key);
         core.getDataGenInitializer()
                 .add(
                         NeoForgeRegistries.Keys.BIOME_MODIFIERS,
@@ -206,9 +210,6 @@ public class EntityBuilder<T extends Entity, P>
                             var spawner = new Weighted<>(
                                     new SpawnerData(getValue(), capturedMin, capturedMax), capturedWeight);
                             var modifier = AddSpawnsBiomeModifier.singleSpawn(biomes, spawner);
-                            var key = ResourceKey.create(
-                                    NeoForgeRegistries.Keys.BIOME_MODIFIERS,
-                                    Identifier.fromNamespaceAndPath(core.getModid(), name + "_spawn"));
                             ctx.register(key, modifier);
                         });
         return this;

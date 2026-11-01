@@ -88,7 +88,7 @@ public static final BlockEntry<Block> SAPPHIRE_ORE = ORE_GROUP
 For tag types beyond block/item/fluid (e.g. entity tags), use the full-form `addTag` with an explicit `ProviderType`:
 
 ```java
-REGISTRYLIB.entityType("magic_golem", MagicGolem::new)
+REGISTRYLIB.entity("magic_golem", MagicGolem::new, MobCategory.MONSTER)
     .addTag(ProviderType.ENTITY_TAGS, EntityTypeTags.FALL_DAMAGE_IMMUNE)
     .register();
 ```

@@ -439,13 +439,17 @@ public class FluidBuilder<T extends BaseFlowingFluid, P>
     @Override
     @StandardAPI
     public FluidEntry<T> register() {
+        if (Boolean.TRUE.equals(defaultSource)) {
+            source(BaseFlowingFluid.Source::new);
+        }
+        Supplier<? extends BaseFlowingFluid> sourceSupplier = this.source;
+        if (sourceSupplier == null) {
+            throw new IllegalStateException("Fluid must have a source version: " + name);
+        }
+
         if (this.registerType) {
             core.registry(
                     this.sourceName, NeoForgeRegistries.Keys.FLUID_TYPES, ignoredKey -> this.fluidType.get());
-        }
-
-        if (Boolean.TRUE.equals(defaultSource)) {
-            source(BaseFlowingFluid.Source::new);
         }
         if (Boolean.TRUE.equals(defaultBlock)) {
             block(FunctionUtil.noOpConsumer());
@@ -454,12 +458,7 @@ public class FluidBuilder<T extends BaseFlowingFluid, P>
             bucket(FunctionUtil.noOpConsumer());
         }
 
-        Supplier<? extends BaseFlowingFluid> sourceSupplier = this.source;
-        if (sourceSupplier != null) {
-            core.registry(sourceName, Registries.FLUID, ignoredKey -> sourceSupplier.get());
-        } else {
-            throw new IllegalStateException("Fluid must have a source version: " + name);
-        }
+        core.registry(sourceName, Registries.FLUID, ignoredKey -> sourceSupplier.get());
 
         return (FluidEntry<T>) super.register();
     }
@@ -471,7 +470,7 @@ public class FluidBuilder<T extends BaseFlowingFluid, P>
 
     @Override
     protected RegistryEntry<Fluid, T> createEntryWrapper(ResourceKey<Fluid> key) {
-        return new FluidEntry<>(core, key);
+        return new FluidEntry<>(core, key, sourceName);
     }
 
     // --- DefaultFluidTypeExtension ---

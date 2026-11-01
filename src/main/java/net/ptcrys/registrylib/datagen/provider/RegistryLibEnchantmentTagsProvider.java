@@ -28,6 +28,7 @@ public class RegistryLibEnchantmentTagsProvider extends EnchantmentTagsProvider
 
     private final RegistryCore owner;
     private final ProviderType<RegistryLibEnchantmentTagsProvider> type;
+    private CompletableFuture<HolderLookup.Provider> contentsProvider;
 
     public RegistryLibEnchantmentTagsProvider(
                                               RegistryCore owner,
@@ -56,6 +57,14 @@ public class RegistryLibEnchantmentTagsProvider extends EnchantmentTagsProvider
     @Override
     public CompletableFuture<TagsProvider.TagLookup<Enchantment>> contentsGetter() {
         return super.contentsGetter();
+    }
+
+    @Override
+    protected CompletableFuture<HolderLookup.Provider> createContentsProvider() {
+        if (contentsProvider == null) {
+            contentsProvider = super.createContentsProvider();
+        }
+        return contentsProvider;
     }
 
     @Override

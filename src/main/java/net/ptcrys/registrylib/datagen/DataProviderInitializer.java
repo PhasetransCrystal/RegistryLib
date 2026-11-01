@@ -22,6 +22,8 @@ public class DataProviderInitializer {
     @SuppressWarnings("rawtypes")
     private final Map<ResourceKey<? extends Registry<?>>, List<RegistrySetBuilder.RegistryBootstrap>> pendingBootstraps = new ConcurrentHashMap<>();
 
+    private final Set<ResourceKey<?>> reservedKeys = ConcurrentHashMap.newKeySet();
+
     public DataProviderInitializer() {
         addDependency(ProviderType.ITEM_TAGS, ProviderType.BLOCK_TAGS);
         addDependency(ProviderType.ENCHANTMENT_TAGS, ProviderType.DATAPACK_REGISTRIES);
@@ -65,6 +67,12 @@ public class DataProviderInitializer {
         return ans;
     }
 
+    public void reserve(ResourceKey<?> key) {
+        if (!reservedKeys.add(key)) {
+            throw new IllegalStateException("Duplicate datapack entry: " + key.identifier());
+        }
+    }
+
     @SuppressWarnings({ "unchecked", "rawtypes" })
     public <T> void add(
                         ResourceKey<Registry<T>> registry, RegistrySetBuilder.RegistryBootstrap<T> provider) {
@@ -76,8 +84,9 @@ public class DataProviderInitializer {
 
     public void addDependency(
                               ProviderType<?> dependent, ProviderType<? extends RegistryLibLookupFillerProvider> parent) {
-        var old = providerDependencies.put(dependent, parent);
-        if (old != null) throw new IllegalStateException("Providers can have only 1 prerequisite");
+        if (providerDependencies.putIfAbsent(dependent, parent) != null) {
+            throw new IllegalStateException("Providers can have only 1 prerequisite");
+        }
     }
 
     public record Sorted(

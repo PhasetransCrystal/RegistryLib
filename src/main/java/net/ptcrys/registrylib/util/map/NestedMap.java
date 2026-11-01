@@ -8,6 +8,7 @@ import it.unimi.dsi.fastutil.objects.Reference2ReferenceOpenHashMap;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 
 public interface NestedMap<K1, K2, V> {
 
@@ -64,13 +65,13 @@ public interface NestedMap<K1, K2, V> {
 
         @Override
         public Map<K1, Map<K2, V>> getMap() {
-            return map;
+            return Collections.unmodifiableMap(map);
         }
 
         @Override
         public Map<K2, V> get(Object k1) {
             var innerMap = map.get(k1);
-            if (innerMap != null) return innerMap;
+            if (innerMap != null) return Collections.unmodifiableMap(innerMap);
             return Collections.emptyMap();
         }
 
@@ -82,6 +83,7 @@ public interface NestedMap<K1, K2, V> {
 
         @Override
         public V put(K1 k1, K2 k2, V value) {
+            Objects.requireNonNull(value, "value");
             if (isRefMap) {
                 return ((Reference2ReferenceMap<K1, Map<K2, V>>) map)
                         .computeIfAbsent(k1, factory)

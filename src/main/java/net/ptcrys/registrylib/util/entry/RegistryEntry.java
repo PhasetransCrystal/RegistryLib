@@ -39,12 +39,11 @@ public class RegistryEntry<T, S extends T> implements Supplier<S> {
     @SuppressWarnings("unchecked")
     protected static <E extends RegistryEntry<?, ?>> E cast(
                                                             Class<? super E> clazz, RegistryEntry<?, ?> entry) {
-        try {
-            return (E) entry;
-        } catch (ClassCastException e) {
+        if (!clazz.isInstance(entry)) {
             throw new IllegalArgumentException(
-                    "Could not convert RegistryEntry: expecting " + clazz + ", found " + entry.getClass());
+                    "Could not convert RegistryEntry: expecting " + clazz.getName() + ", found " + (entry == null ? "null" : entry.getClass().getName()));
         }
+        return (E) entry;
     }
 
     public Identifier identifier() {

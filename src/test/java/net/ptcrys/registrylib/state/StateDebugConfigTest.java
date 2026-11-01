@@ -5,6 +5,7 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class StateDebugConfigTest {
@@ -30,5 +31,13 @@ class StateDebugConfigTest {
         assertTrue(config.writable());
         assertEquals(1, config.readPermission());
         assertEquals(3, config.writePermission());
+    }
+
+    @Test
+    void permissionMustBeInRange() {
+        StateDebugConfig config = StateDebugConfig.createEnabled();
+
+        assertThrows(IllegalArgumentException.class, () -> config.readPermission(-1));
+        assertThrows(IllegalArgumentException.class, () -> config.writePermission(5));
     }
 }

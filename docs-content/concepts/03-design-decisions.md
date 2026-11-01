@@ -65,11 +65,11 @@ Group is a separate concept rather than builder inheritance because:
 3. **Runtime configurable** —group properties can be computed programmatically, not just hardcoded.
 4. **No class explosion** —builder inheritance would lead to `MachineBlockBuilder`, `MachineItemBuilder`, etc. Groups avoid this.
 
-## Why Do Entry Types Wrap DeferredHolder?
+## Why Do Entry Types Have Dedicated Wrapper Classes?
 
-**Alternative:** return the raw registered object, or return the `DeferredHolder` directly.
+**Alternative:** return the raw registered object.
 
-Entry types (`ItemEntry`, `BlockEntry`, etc.) extend `DeferredHolder` and add convenience methods:
+Entry types (`ItemEntry`, `BlockEntry`, etc.) wrap the registered object and add convenience methods:
 
 - `asStack()`, `readOnlyStack()`, `asResource()` for items and fluids
 - `getDefaultState()` for blocks
@@ -77,9 +77,9 @@ Entry types (`ItemEntry`, `BlockEntry`, etc.) extend `DeferredHolder` and add co
 
 **Rationale:**
 
-1. **Lazy by default** —wrapping `DeferredHolder` means entries are safe to declare as `static final` fields. They resolve when NeoForge is ready, not at class-load time.
-2. **Convenience without coupling** —helper methods like `asStack()` save repeated boilerplate in gameplay code without requiring you to import RegistryLib in your game logic (since they return vanilla types).
-3. **Holder compatibility** —because entries extend `DeferredHolder`, they work directly in APIs that expect `Holder<Block>`, `Holder<Item>`, etc.
+1. **Lazy by default** — deferring resolution means entries are safe to declare as `static final` fields. They resolve when NeoForge is ready, not at class-load time.
+2. **Convenience without coupling** — helper methods like `asStack()` save repeated boilerplate in gameplay code without requiring you to import RegistryLib in your game logic (since they return vanilla types).
+3. **Holder compatibility** — because `AbstractHolderEntry` implements `Holder`, item, block, and fluid entries work directly in APIs that expect `Holder<Block>`, `Holder<Item>`, etc.
 
 The trade-off is an extra layer of indirection, but in practice this has zero measurable performance impact.
 
@@ -103,7 +103,7 @@ public class MachineBlockBuilder<T extends MachineBlock, P>
 **Rationale:**
 
 1. **Java-native** —no special framework to learn. If you know inheritance, you know how to extend builders.
-2. **Full access** —subclasses can override `createEntry()`, `registerModel()`, and other protected methods for deep customization.
+2. **Full access** —subclasses can override `createEntry()`, `createEntryWrapper()`, and `register()` for deep customization.
 3. **Type-safe chaining** —the self-type parameter `S` ensures your custom methods chain correctly with inherited methods.
 
 A plugin system would add complexity for a use case that most mods don't need. Method overriding keeps the common case simple and the advanced case possible.
@@ -150,7 +150,7 @@ reg.freeze();
 
 1. **Intent-revealing API** —`freeze()` makes the lifecycle explicit. A plain map with a boolean guard is easy to get wrong (forgetting to check, exposing the map directly).
 2. **Thread-safe by construction** —the backing map is `ConcurrentHashMap` (or synchronized `LinkedHashMap` for ordered iteration). Freezing replaces it with an unmodifiable snapshot, so readers never see a half-frozen state.
-3. **Reusable** —tooltip registries, state registries, and internal lookup tables all share the same freeze pattern. Centralizing it avoids copy-paste and inconsistent error messages.
+3. **Reusable** —independent callers can share the same freeze pattern instead of rolling their own map plus boolean guard, which avoids copy-paste and inconsistent error messages. RegistryLib's built-in registries do not currently use it.
 
 ## Dead Code Removal Philosophy
 
@@ -166,7 +166,7 @@ Every design has trade-offs. Here are RegistryLib's known limitations:
 
 | Limitation | Why it exists | Workaround |
 | --- | --- | --- |
-| Not all registries have dedicated builders | Supporting every NeoForge registry would bloat the API | Use `generic()` or `simple()` for unsupported registries |
+| Not all registries have dedicated builders | Supporting every NeoForge registry would bloat the API | Use `registry(...)` for unsupported registries |
 | Datagen must run to generate assets | Integrated datagen means no manual JSON editing | This is intentional —generated assets are more maintainable |
 | Learning curve for the generic type system | `AbstractBuilder<R, T, P, S>` has four type parameters | In practice, users only see the outer API; generics are internal |
 | Custom builders require understanding of the builder hierarchy | Method overriding needs knowledge of the base classes | Most mods don't need custom builders; the built-in ones cover common cases |

@@ -436,7 +436,7 @@ static {
 
 ```json title="synthesizer_iron_gold_water_to_diamond.json"
 {
-  "type": "registrylibtest:synthesizer",
+  "type": "registrylibdemo:synthesizer",
   "experience": 30.0,
   "fluid": {
     "ingredient": "minecraft:water",
@@ -530,7 +530,7 @@ REGISTRYLIB.addRecipe("smelting/logs_to_charcoal",
 
 ### Generated JSON
 
-```json title="data/registrylibtest/recipe/smelting/amethyst_shard.json"
+```json title="data/registrylibdemo/recipe/smelting/amethyst_shard.json"
 {
   "type": "minecraft:smelting",
   "category": "blocks",
@@ -541,7 +541,7 @@ REGISTRYLIB.addRecipe("smelting/logs_to_charcoal",
 }
 ```
 
-Note the `"type"` is `"minecraft:smelting"` — the recipe is injected into the vanilla type. The file lives under `data/registrylibtest/recipe/` (your mod's namespace) so it doesn't conflict with vanilla recipes.
+Note the `"type"` is `"minecraft:smelting"` — the recipe is injected into the vanilla type. The file lives under `data/registrylibdemo/recipe/` (your mod's namespace) so it doesn't conflict with vanilla recipes.
 
 :::tip
 `core.addRecipe()` works for any recipe type — vanilla, NeoForge, or third-party. For custom recipe types registered via `recipeType()`, prefer `RecipeTypeEntry.addRecipe()` which automatically prefixes the type name.
@@ -576,7 +576,7 @@ ALTAR.addRecipe("cobblestone_to_stone",
 | `.build()` | Register and return parent (for chaining) |
 
 :::warning
-Calling `.register()` on the same `RecipeTypeBuilder` twice throws an `IllegalStateException`. Store the returned `RecipeTypeEntry` in a `static final` field and reuse it instead of re-registering.
+Set `.serializer(codec, streamCodec)` before calling `.register()`. If it is missing, registration throws `IllegalStateException` and that builder cannot be retried; create a new builder after correcting the configuration. Store a successfully returned `RecipeTypeEntry` in a `static final` field and reuse it instead of re-registering.
 :::
 
 ### RegistryCore.addRecipe

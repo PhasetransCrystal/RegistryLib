@@ -50,7 +50,7 @@ public static final WorldStateEntry<Integer> ESSENCE_EPOCH = REGISTRYLIB
         .register();
 ```
 
-World and chunk states may share the same identifier path. RegistryLib keeps the scope separate internally.
+World and chunk states must use different identifier paths within the same mod. RegistryLib rejects a duplicate state ID even when the scopes differ.
 
 ## Sync
 
@@ -62,7 +62,7 @@ REGISTRYLIB.chunkState("ambient_essence", Codec.INT, () -> 0)
         .register();
 ```
 
-`sync(codec)` enables sync-on-modify. `syncOnModify(true)` only has an effect when a sync codec is also configured.
+`sync(codec)` enables sync-on-modify for both scopes. Only `ChunkStateBuilder` exposes `syncOnModify(boolean)` to control that behavior; it has an effect only when a sync codec is configured.
 
 ## Debug Commands
 
@@ -95,7 +95,7 @@ By default, write commands are disabled unless the state debug config is writabl
         .writePermission(4))
 ```
 
-When a world state and a chunk state share the same path, the command shape decides the scope. `get <id>` reads world state, while `get <id> <chunk_x> <chunk_z>` reads chunk state. `set` uses the chunk form when the value tail starts with two integer chunk coordinates.
+The command shape selects the scope: `get <id>` reads world state, while `get <id> <chunk_x> <chunk_z>` reads chunk state. `set` uses the chunk form when the value tail starts with two integer chunk coordinates. State IDs must still be unique across scopes.
 
 ## Worldgen Feature
 

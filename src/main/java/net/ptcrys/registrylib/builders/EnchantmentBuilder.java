@@ -437,6 +437,7 @@ public class EnchantmentBuilder<P> {
             final List<ResourceKey<Enchantment>> capturedExclusive = List.copyOf(exclusiveWith);
             final List<Consumer<Enchantment.Builder>> capturedEffects = List.copyOf(effectCallbacks);
 
+            core.getDataGenInitializer().reserve(key);
             core.getDataGenInitializer()
                     .add(
                             Registries.ENCHANTMENT,

@@ -52,10 +52,6 @@ import java.util.function.Function;
  *         .serializer(MyRecipe.CODEC, MyRecipe.STREAM_CODEC)
  *         .register();
  *
- * // Custom RecipeSerializer factory (alternative to serializer())
- * .<MyRecipe>recipeType("my_recipe")
- *         .serializerFactory(() -> MyRecipe.SERIALIZER)
- *         .register();
  * }</pre>
  *
  * @param <T> the concrete recipe type
@@ -128,7 +124,8 @@ public class RecipeTypeBuilder<T extends Recipe<?>, P> {
      * <p>
      * Registers the {@link RecipeType} and {@link RecipeSerializer}, and returns a {@link
      * RecipeTypeEntry} wrapping both. Use {@link RecipeTypeEntry#addRecipe} to add individual recipes
-     * for datagen.
+     * for datagen. Configure {@link #serializer(MapCodec, StreamCodec)} before calling this method;
+     * a failed registration attempt cannot be retried on the same builder.
      */
     @StandardAPI
     public RecipeTypeEntry<T> register() {
@@ -138,7 +135,7 @@ public class RecipeTypeBuilder<T extends Recipe<?>, P> {
         registered = true;
         if (codec == null || streamCodec == null) {
             throw new IllegalStateException(
-                    "RecipeTypeBuilder for '" + name + "' requires serializer(codec, streamCodec) or serializerFactory() before register()");
+                    "RecipeTypeBuilder for '" + name + "' requires serializer(codec, streamCodec) before register()");
         }
 
         // Register RecipeType (custom factory or default)

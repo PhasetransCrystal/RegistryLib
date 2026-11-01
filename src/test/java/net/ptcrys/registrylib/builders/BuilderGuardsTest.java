@@ -14,8 +14,8 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * Verifies that all builder classes that bypass {@link AbstractBuilder} carry their own {@code
- * registered} double-registration guard.
+ * Checks the declared shape of builders that bypass {@link AbstractBuilder}. Field and method
+ * presence alone does not prove the double-registration guard runs.
  *
  * <p>
  * Because the unit-test classpath does not include Minecraft, these tests use reflection to
@@ -50,27 +50,6 @@ class BuilderGuardsTest {
                                             boolean.class,
                                             field.getType(),
                                             "'registered' field must be of type boolean");
-                                }));
-    }
-
-    @TestFactory
-    Stream<DynamicTest> registeredFieldDefaultsToFalse() {
-        return STANDALONE_BUILDERS.stream()
-                .map(
-                        fqcn -> DynamicTest.dynamicTest(
-                                simpleName(fqcn) + " 'registered' defaults to false",
-                                () -> {
-                                    Class<?> clazz = loadOrSkip(fqcn);
-                                    Field field = findDeclaredField(clazz, "registered");
-                                    assertNotNull(field, fqcn + " must declare 'registered'");
-                                    // boolean fields default to false in Java, but verify it is not initialized
-                                    // to true
-                                    // by inspecting that it has no compile-time constant initializer of true.
-                                    // Since the field is an instance field with no explicit = true, the JVM
-                                    // default is false.
-                                    assertTrue(
-                                            field.getType() == boolean.class,
-                                            "'registered' should be primitive boolean (defaults to false)");
                                 }));
     }
 

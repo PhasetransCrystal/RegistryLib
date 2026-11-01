@@ -20,8 +20,8 @@ This tutorial registers two blocks: a simple decorative block and a fully config
 The shortest path to a working block with a matching item:
 
 ```java
-public static final BlockEntry<Block> DECORATIVE_STONE = RegistryLibTest.REGISTRYLIB
-        .block(RegistryLibTest.REGISTRYLIB, "decorative_stone", Block::new)
+public static final BlockEntry<Block> DECORATIVE_STONE = RegistryLibDemo.REGISTRYLIB
+        .block(RegistryLibDemo.REGISTRYLIB, "decorative_stone", Block::new)
         .langCn("Decorative Stone (zh_cn)")
         .initialProperties(() -> Blocks.STONE)
         .lang("Decorative Stone")
@@ -43,7 +43,7 @@ That chain:
 When you need custom loot, mining tags, and a tooltip on the block item:
 
 ```java
-public static final BlockEntry<Block> MAGIC_ORE = RegistryLibTest.REGISTRYLIB
+public static final BlockEntry<Block> MAGIC_ORE = RegistryLibDemo.REGISTRYLIB
         .block("magic_ore", Block::new)
         .initialProperties(() -> Blocks.IRON_ORE)
         .properties(p -> p.strength(4.0F, 5.0F).requiresCorrectToolForDrops())

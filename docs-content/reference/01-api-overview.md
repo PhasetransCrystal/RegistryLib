@@ -9,7 +9,7 @@ description: Entry points, builder families, and common chain patterns.
 This page is for quick lookup only, not full teaching. It answers "which entry point should I start from?" and "what do common chains usually look like?"
 
 :::note
-The code snippets on this page are short excerpts from the runnable `RegistryLibTest` examples, not invented pseudo-code.
+The code snippets on this page are short excerpts from the runnable `RegistryLibDemo` examples, not invented pseudo-code.
 :::
 
 ## Which Entry Point Should I Start From?
@@ -21,7 +21,7 @@ The code snippets on this page are short excerpts from the runnable `RegistryLib
 | Register a Block | `block("id", factory)` or `block("id")` | `initialProperties`, `simpleItem` or `item`, `loot`, `addTag` |
 | Register a Fluid | `fluid("id", still, flow)` | `lang`, `clientExtension`, `properties`, `block`, `bucket` |
 | Register a BlockEntity | `blockEntity("id", factory)` | `validBlock` or `validBlocks`, `renderer` |
-| Register a generic object in another registry | `generic("id", registryKey, factory)` or `simple(...)` | `register` or immediate completion |
+| Register a generic object in another registry | `registry("id", registryKey, factory)` | `register` or immediate completion |
 | Register a data component type lazily | `dataComponentTypeEntry("id", builder)` | pass the entry into supplier-friendly APIs |
 | Register a creative tab | `creativeTab("id")` or `creativeTab("id", enUs, locales)` | title, icon, content population |
 | Register a NeoForge attachment type | `attachmentType("id", holder -> defaultValue)` | `serialize`, `sync`, `register` |
@@ -124,7 +124,7 @@ Several Entry wrappers also satisfy holder-style usage directly. When another AP
 | --- | --- |
 | `FreezableRegistry<K, V>` | A generic key-value registry with freeze semantics. Once `freeze()` is called, the registry becomes permanently immutable. Thread-safe. Use `create()` for unordered or `createOrdered()` for insertion-order iteration. |
 
-`FreezableRegistry` is located in `net.phasetranscrystal.registrylib.util.registry` and provides:
+`FreezableRegistry` is located in `net.ptcrys.registrylib.util.registry` and provides:
 
 | Method | Description |
 | --- | --- |
