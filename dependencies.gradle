@@ -10,8 +10,7 @@ dependencies {
     testImplementation("it.unimi.dsi:fastutil:8.5.18")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 
-    // 26.2 migration: restore these once 26.2-compatible builds are available.
-    // runtimeOnly "mezz.jei:jei-${minecraft_version}-neoforge:${jei_version}"
-    // runtimeOnly "curse.maven:jade-324717:8755115"
-    // runtimeOnly "curse.maven:spark-361579:8275631"
+    runtimeOnly "mezz.jei:jei-${minecraft_version}-neoforge:${jei_version}"
+    runtimeOnly "curse.maven:jade-324717:8755115"
+    runtimeOnly "curse.maven:spark-361579:8918574"
 }
