@@ -11,6 +11,6 @@ dependencies {
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 
     runtimeOnly "mezz.jei:jei-${minecraft_version}-neoforge:${jei_version}"
-    runtimeOnly "curse.maven:jade-324717:8651070"
-    runtimeOnly "curse.maven:spark-361579:8275631"
+    runtimeOnly "curse.maven:jade-324717:9042207"
+    runtimeOnly "curse.maven:spark-361579:8918574"
 }
